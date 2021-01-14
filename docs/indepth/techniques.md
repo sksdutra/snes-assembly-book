@@ -1,8 +1,8 @@
-# Techniques
-This chapter focuses on general techniques you can use in SNES ASM.
+# Técnicas
+Nesse capítulo focaremos em técnicas gerais que você pode usar no ASM de SNES.
 
-## Byte counting
-Each instruction assembles into one or more bytes. This happens as follows: First, the opcode is guaranteed assembled into a byte. Then the byte is followed by 0-3 bytes which serves as the parameter of the opcode. Every 2 hex digits equals 1 byte. This means that the maximum amount of bytes an instruction in SNES can use, is four bytes: opcode + a 24-bit parameter. Here is an example on how LDA would look like, when it's assembled with different addressing modes:
+## Contagem de bytes
+Cada instrução é montada em um ou mais bytes. Isso acontece como se segue: primeiro, o opcode é garantidamente montado em um byte. Em seguida, o byte é seguido por 0-3 bytes, que serve como parâmetro do opcode. Cada 2 dígitos hexadecimais é igual a 1 byte. Isso significa que a quantidade máxima de bytes que uma instrução em SNES pode usar é de quatro bytes: opcode + um parâmetro de 24 bits. Aqui está um exemplo de como seria o LDA, quando montado com diferentes modos de endereçamento:
 
 ```
 LDA #$00           ; A9 00
@@ -12,14 +12,16 @@ LDA $0011          ; AD 11 00
 LDA $001122        ; AF 22 11 00
 ```
 
-An instruction without a hexadecimal parameter is only 1 byte, like `INC A` or `TAX`. An instruction with an 8-bit parameter is 2 bytes, like `LDA #$00`. An instruction with a 16-bit parameter is 3 bytes, like `LDA $0000`. An instruction with a 24-bit parameter is 4 bytes, like `LDA $000000`. It doesn’t matter if the addressing mode is indexed, direct indirect or something else. It all depends on the length of the `$`-value.
+Uma instrução sem um parâmetro hexadecimal tem apenas 1 byte, como `INC A` ou` TAX`. Uma instrução com um parâmetro 8-bit tem 2 bytes, como `LDA #$00`. Uma instrução com um parâmetro 16-bit tem 3 bytes, como `LDA $0000`. Uma instrução com um parâmetro 24-bit tem 4 bytes, como `LDA $000000`. Não importa se o modo de endereçamento é indexado, indireto direto ou outro. Tudo depende do comprimento do valor `$`.
 
-## Shorthand zero comparison
-Faster comparison makes use of processor flags effectively, because branches actually depend on the processor flags. As mentioned in this tutorial earlier, `BEQ` branches if the zero flag is set, `BNE` branches if the zero flag is clear, `BCC` branches if the carry flag is clear, and so on. 
+## Abreviando as comparações com zero
+A comparação mais rápida usa os flags do processador de forma eficaz, pois os desvios dependem, na verdade, dos flags do processador. Conforme mencionado neste tutorial anteriormente, `BEQ` efetua o desvio se o flag zero estiver habilitado,` BNE` efetua o desvio se o flag zero estiver desabilitado, `BCC` efetua o desvio se o flag carry estiver desabilitado e assim por diante.
 
-Often, if the result of ​any​ operation is zero (`$00`, or `$0000` in 16-bit mode), the zero flag gets set. For example, if you do `LDA #$00`, the zero flag is set. Nearly all opcodes which modify an address or register affect the zero flag.
+Em geral, se o resultado de qualquer operação for zero (`$00` ou `$0000` no modo 16-bits), o flag zero é habilitado. Por exemplo, se você executar `LDA #$00`, o flag zero será habilitado. Quase todos os opcodes que modificam um endereço ou registrador afetam o flag zero.
 
 By making use of the zero flag, it's possible to check if a certain instruction has zero as its result (including loads). This way, you can write shorthand methods to check if an address actually contains the value `$00` or `$0000`. Here's an example:
+
+Usando o flag zero, é possível verificar se uma determinada instrução tem como resultado zero (incluindo carregamentos). Assim, você pode escrever métodos abreviados para verificar se um endereço realmente contém o valor `$00` ou` $0000`. Como no exemplo abaixo:
 
 ```
 LDA $59
@@ -31,9 +33,10 @@ STA $02
 IsZero:
 RTS
 ```
-This code checks if address $7E0059 contains the value `$00`. If it does contain this value, then it immediately returns. If it does not contain the value `$00`, then it stores the value `$01` into address $7E0002.
+Esse código checa se o endereço $7E0059 contém o valor $00. Se ele contiver, então imediatamente retorna, caso contrário, armazena o valor $01 no endereço $7E0002.
 
-The reverse is also possible: checking if an address does *not* contain zero. here's an example:
+O contrário também é possível. Checar se um endereço *não* contém zero, eis um exemplo:
+
 ```
 LDA $59
 BNE IsNotZero
@@ -44,42 +47,42 @@ STA $02
 IsNotZero:
 RTS
 ```
-This code checks if address $7E0059 does *not* contain the value `$00`. If it indeed does not contain this value, then it immediately returns. If it does contain the value `$00`, then it stores the value `$01` into address $7E0002, instead.
+Esse código checa se o endereço $7E0059 *não* contém o valor $00. Se ele *não* contiver, então imediatamente retorna, caso contrário, armazena o valor $01 no endereço $7E0002.
 
 ## Looping
-Loops are certain type of code flow which allow you to execute code repeatedly. It is especially useful when you need to read out a table or a memory region value-by-value. A practical example is reading out level data from the SNES ROM, in order to build a playable level. Levels are essentially a long list of object and sprite data, therefore, this data can be read out in a repetetive way, until you reach the end of such data.
+Os loops podem ser descritos como fluxo de código que permite a você executar código repetidamente. É muito útil quando você precisa ler uma tabela ou uma região de memória valor por valor. Um exemplo prático é a leitura de dados de nível da ROM do SNES, a fim de construir um nível jogável. Os níveis são uma longa lista de dados de objetos e sprites, portanto, esses dados podem ser lidos de forma repetitiva, até chegar ao fim dos mesmos.
 
-The examples within this section only loops through tables to copy them to RAM addresses, but of course, loops can be used to implement much more complex logic.
+Os exemplos nesta seção apenas percorrem as tabelas para copiá-las para endereços de RAM, mas é claro, os loops podem ser usados para implementar uma lógica muito mais complexa.
 
-### Looping with a loop counter check
-It's possible to loop from the beginning to the end of a table. The following code demonstrates this.
+### Looping com verificação de um contador
+É possível criar um loop do início ao fim de uma tabela. O código a seguir demonstra isso:
 
 ```
-   LDX.b #$00      ; Initialize the loop counter
--  LDA Table,x     ; Reads out the values in the table
-   STA $00,x       ; Store them to addresses $7E0000-$7E0003
-   INX             ; Increase loop counter by one
-   CPX.b #Table_end-Table ; Use the size of the table as the check
-   BNE -           ; If the loop counter doesn't equal this, then continue looping.
+   LDX.b #$00      ; Iniciliza o contador do loop
+-  LDA Table, x    ; Lê os valores na tabela
+   STA $00, x      ; Armazena os valore nos endereços $7E0000-$7E0003
+   INX             ; Incrementa o contador em um
+   CPX.b #Table_end-Table ; Usa o tamanho da tabela como checagem
+   BNE -           ; Se o contador e a checagem não forem iguais, o loop continua.
    RTS
 
 Table:   db $01,$02,$04,$08 ; The values are read out in order
 .end
 ```
-The code initializes the loop counter with the value `$00`. With every iteration, this loop counter increases by one, and is then compared with the size of the table. Therefore, the loop executes for every byte within this table.
+Esse código inicializa um contador para o loop com o valor $00. A cada iteração, esse loop incrementa o contador em um e, então, o compara com o tamanho da tabela. Assim, o loop executa para cada byte nesta tabela.
 
-### Looping with a negative check
-While it's possible to loop from the beginning towards the end of a table, it's also possible to loop from the end towards the beginning of the table. This method has a "shorthand" check in order to see if the loop should be terminated, by making clever use of the "negative" processor flag. When using this method, your loop will essentially run backwards.
+### Looping com uma checagem negativa
+Embora seja possível fazer um loop do início ao final de uma tabela, também é possível fazer um loop do final em direção ao início da tabela. Este método tem uma verificação "abreviada" para ver se o loop deve ser encerrado, fazendo uso inteligente do flag de processador "negative". Ao usar este método, seu loop irá essencialmente rodar para trás.
 
 ```
-   LDX.b #Table_end-Table-1 ; Get the length of the table ($03). The -1 is necessary, 
--  LDA Table,x              ; else the loop will be off-by-one. Use that as a loop counter.
-   STA $00,x                ; One by one store the values to addresses $7E0003 to $7E0000, in that order.
-   DEX                      ; Decrease the loop counter by one.
-   BPL -                    ; If the loop counter isn't negative, continue looping.
+   LDX.b #Table_end-Table-1 ; Armazena o comprimento da tabela ($03). O -1 é necessário, 
+-  LDA Table, x             ; senão o loop passará em 1. Esta linha usa o valor como contador.
+   STA $00, x               ; Armazena os valores nos endereços $7E0003 a $7E0000, nessa ordem.
+   DEX                      ; Decrementa o contador em um.
+   BPL -                    ; Se o loop não for negativo, continua.
    RTS
 
-Table:   db $01,$02,$04,$08 ; The values are read out backwards as well
+Table:   db $01,$02,$04,$08 ; Os valores serão lidos na ordem inversa
 .end
 ```
 Because the loop counter serves as an index to address $7E0000, as well as the table, it reads and stores the values in a backwards order, as the counter starts with the value `$03`.
