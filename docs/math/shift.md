@@ -30,7 +30,7 @@ O ASL também pode mover os bits em um endereço sem afetar A.
 
 ```
 LDA #$02           ; Carregue o valor $02 em A
-STA $00            ; Guarde isto no endereço $7E0000
+STA $00            ; Armazene-o no endereço $7E0000
 ASL $00            ; Mude os bits $7E0000 para a esquerda uma vez
                    ; A ainda é $02, enquanto que $7E0000 agora é $04
 ```
@@ -38,7 +38,7 @@ ASL $00            ; Mude os bits $7E0000 para a esquerda uma vez
 Você também pode deslocar bits para a direita usando LSR.
 
 ```
-LDA #$02           ; Carregue o valor $ 02 em A
+LDA #$02           ; Carregue o valor $02 em A
 LSR A              ; Divida A por 2
                    ; A agora é $01
 ```
