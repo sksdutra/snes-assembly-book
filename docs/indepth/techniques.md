@@ -60,13 +60,13 @@ Os exemplos nesta seção apenas percorrem as tabelas para copiá-las para ender
 ```
    LDX.b #$00      ; Iniciliza o contador do loop
 -  LDA Table, x    ; Lê os valores na tabela
-   STA $00, x      ; Armazena os valore nos endereços $7E0000-$7E0003
+   STA $00, x      ; Armazena os valores nos endereços $7E0000-$7E0003
    INX             ; Incrementa o contador em um
    CPX.b #Table_end-Table ; Usa o tamanho da tabela como checagem
-   BNE -           ; Se o contador e a checagem não forem iguais, o loop continua.
+   BNE -           ; Se o contador e a checagem não forem iguais, o loop continua
    RTS
 
-Table:   db $01,$02,$04,$08 ; The values are read out in order
+Table:   db $01,$02,$04,$08 ; Os valores são lidos nessa ordem
 .end
 ```
 Esse código inicializa um contador para o loop com o valor $00. A cada iteração, esse loop incrementa o contador em um e, então, o compara com o tamanho da tabela. Assim, o loop executa para cada byte nesta tabela.
@@ -75,38 +75,40 @@ Esse código inicializa um contador para o loop com o valor $00. A cada iteraç�
 Embora seja possível fazer um loop do início ao final de uma tabela, também é possível fazer um loop do final em direção ao início da tabela. Este método tem uma verificação "abreviada" para ver se o loop deve ser encerrado, fazendo uso inteligente do flag de processador "negative". Ao usar este método, seu loop irá essencialmente rodar para trás.
 
 ```
-   LDX.b #Table_end-Table-1 ; Armazena o comprimento da tabela ($03). O -1 é necessário, 
--  LDA Table, x             ; senão o loop passará em 1. Esta linha usa o valor como contador.
-   STA $00, x               ; Armazena os valores nos endereços $7E0003 a $7E0000, nessa ordem.
-   DEX                      ; Decrementa o contador em um.
-   BPL -                    ; Se o loop não for negativo, continua.
+   LDX.b #Table_end-Table-1 ; Recebe o comprimento da tabela ($03). O -1 é necessário, 
+-  LDA Table, x             ; senão o loop passará em 1. Esta linha usa o valor como contador
+   STA $00, x               ; Armazena os valores nos endereços $7E0003 a $7E0000, nessa ordem
+   DEX                      ; Decrementa o contador em um
+   BPL -                    ; Se o contador de loop não for negativo, continua
    RTS
 
 Table:   db $01,$02,$04,$08 ; Os valores serão lidos na ordem inversa
 .end
 ```
-Because the loop counter serves as an index to address $7E0000, as well as the table, it reads and stores the values in a backwards order, as the counter starts with the value `$03`.
+Como o contador de loops serve como um índice para endereçar $7E0000, assim como a tabela, ele lê e armazena os valores em ordem inversa, já que o contador começa com o valor `$03`.
 
-The `BPL` ensures that the loop breaks once the loop counter reaches the value `$FF`. That means the negative flag will be set, thus BPL will not branch to the beginning of the loop.
+O `BPL` garante que o loop será interrompido assim que o contador de loop atingir o valor` $FF`. Isso significa que o sinalizador negativo será definido, portanto, o BPL não ramificará para o início do loop. 
 
-This loop method has a drawback however. When the loop counter is `$81-$FF`, the loop will execute once, then break immediately, as BPL will not branch. This is because after `DEX`, the loop counter is immediately negative. Remember that values `$80` to `$FF` are considered negative. However, if your initial loop counter is `$80`, it will first execute the code within the loop, decrease the loop counter by 1, *then* check if the loop counter is negative. Therefore with this loop, you can loop through 129 bytes of data at most.
+No entanto, esse método de loop tem uma desvantagem. Quando o contador de loop é `$81- $FF`, o loop será executado uma vez e será interrompido imediatamente, pois o BPL não se ramificará. Isso ocorre porque depois de `DEX`, o contador de loop é imediatamente negativo. Lembre-se de que os valores de `$80` a` $FF` são considerados negativos. No entanto, se seu contador de loop inicial for `$80`, ele executará primeiro o código dentro do loop, diminuirá o contador de loop em 1, *e  então* verificará se o contador de loop é negativo. Portanto, com esse loop, você pode percorrer 129 bytes de dados no máximo.
 
 It's also possible to have the loop counter at 16-bit mode while having the accumulator at 8-bit mode. The following example demonstrates this:
 
+Também é possível ter o contador de loop no modo de 16-bit enquanto o acumulador está no modo de 8-bit. O exemplo a seguir demonstra isso:
+
 ```
    REP #$10
-   LDX.w #Table_end-Table-1 ; Get the length of the table ($03). Notice the ".w" to force
--  LDA Table,x              ; the assembler to use a 16-bit value.
-   STA $00,x                ; One by one store the values into address $7E0000-$7E0003.
-   DEX                      ; Decrease the loop counter by one.
-   BPL -                    ; If the loop counter isn't negative, continue looping.
+   LDX.w #Table_end-Table-1 ; Recebe o comprimento da tabela ($03). Perceba o ".w" que força
+-  LDA Table,x              ; o assembler a usar um valor 16-bit
+   STA $00,x                ; Armazena os valores nos endereços $7E0000-$7E0003
+   DEX                      ; Decrementa o contador em 1
+   BPL -                    ; Se o contador de loop não for negativo, continua
    SEP #$10
    RTS
 
 Table:   db $01,$02,$04,$08
 .end
 ```
-In this case, it's possible to loop through ‭32769 bytes of data at most.
+Nesse caso, é possível percorrer 32.769 bytes de dados no máximo.
 
 ### Looping with an "end-of-data" check.
 This method basically keeps looping and iterating through values, until it reaches some kind of an "end-of-data" marker. Generally speaking, this value is something that the code normally never uses as an actual value. In most cases, it is the value `$FF` or `$FFFF`, although the decision is entirely up to the programmer. Here's an example which uses such a marker.
