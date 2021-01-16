@@ -2,7 +2,7 @@
 Nesse capítulo focaremos em técnicas gerais que você pode usar no ASM de SNES.
 
 ## Contagem de bytes
-Cada instrução é montada em um ou mais bytes. Isso acontece como se segue: primeiro, o opcode é garantidamente montado em um byte. Em seguida, o byte é seguido por 0-3 bytes, que serve como parâmetro do opcode. Cada 2 dígitos hexadecimais é igual a 1 byte. Isso significa que a quantidade máxima de bytes que uma instrução em SNES pode usar é de quatro bytes: opcode + um parâmetro de 24 bits. Aqui está um exemplo de como seria o LDA, quando montado com diferentes modos de endereçamento:
+Cada instrução é montada em um ou mais bytes. Isso acontece como se segue: primeiro, o opcode é garantidamente montado em um byte. Em seguida, o byte é seguido por 0-3 bytes, que serve como parâmetro do opcode. Cada 2 dígitos hexadecimais é igual a 1 byte. Isso significa que a quantidade máxima de bytes que uma instrução em SNES pode usar é de quatro bytes: opcode + um parâmetro de 24-bit. Aqui está um exemplo de como seria o LDA, quando montado com diferentes modos de endereçamento:
 
 ```
 LDA #$00           ; A9 00
@@ -17,7 +17,7 @@ Uma instrução sem um parâmetro hexadecimal tem apenas 1 byte, como `INC A` ou
 ## Abreviando as comparações com zero
 A comparação mais rápida usa os flags do processador de forma eficaz, pois os desvios dependem, na verdade, dos flags do processador. Conforme mencionado neste tutorial anteriormente, `BEQ` efetua o desvio se o flag zero estiver habilitado,` BNE` efetua o desvio se o flag zero estiver desabilitado, `BCC` efetua o desvio se o flag carry estiver desabilitado e assim por diante.
 
-Em geral, se o resultado de qualquer operação for zero (`$00` ou `$0000` no modo 16-bits), o flag zero é habilitado. Por exemplo, se você executar `LDA #$00`, o flag zero será habilitado. Quase todos os opcodes que modificam um endereço ou registrador afetam o flag zero.
+Em geral, se o resultado de qualquer operação for zero (`$00` ou `$0000` no modo 16-bit), o flag zero é habilitado. Por exemplo, se você executar `LDA #$00`, o flag zero será habilitado. Quase todos os opcodes que modificam um endereço ou registrador afetam o flag zero.
 
 By making use of the zero flag, it's possible to check if a certain instruction has zero as its result (including loads). This way, you can write shorthand methods to check if an address actually contains the value `$00` or `$0000`. Here's an example:
 
@@ -130,7 +130,7 @@ Table:   db $01,$02,$04,$FF
 ```
 No caso deste exemplo, o código percorre quatro bytes de dados, três dos quais são dados reais e um dos quais é o marcador de fim dos dados. Assim que o loop encontrar este marcador, neste caso o valor `$FF`, o loop é encerrado imediatamente.
 
-## Bigger branch reach
+## Maior alcance para os desvios
 No capítulo [comparações, desvios e labels](../programming/branches), é mencionado que os ramos têm uma distância limitada de -128 a 127 bytes. Quando você excede esse limite, o montador detecta isso automaticamente e lança algum tipo de erro, como o seguinte:
 
 ```
@@ -213,6 +213,7 @@ Há algumas instruções projetadas para fazer uso de tabelas de ponteiros. São
 |**JMP (*absolute address*,x)**|JMP ($0000,x)|Salta para um endereço absoluto localizado no endereço $7E0000, que é indexado por `X`.|
 |**JML [*absolute address*]**|JML [$0000]|Salta para um endereço longo, localizado no endereço $7E0000.|
 |**JSR (*absolute address*,x)**|JSR ($0000,x)|Salta para um endereço absoluto localizado em $7E0000, que é indexado por `X`, então retorna.|
+
 Com estes opcodes, assim como uma tabela de ponteiros, é possível executar uma subotina dependendo do valor de um determinado endereço de RAM. Aqui está um exemplo que executa uma rotina dependendo do valor do endereço da RAM $7E0014:
 
 ```
@@ -292,58 +293,60 @@ Level4:   db $C0,$92,$84,$81,$82,$99,$FF
 ```
 Na primeira seção, usamos o mesmo conceito de multiplicação de um valor para acessar uma tabela de ponteiros. Exceto que desta vez, multiplicamos por três, porque as tabelas de ponteiros contêm valores que são *longos*. Usamos este valor como um indexador para a tabela de ponteiros e armazenamos o ponteiro na RAM de $7E0000 a $7E0002, em little-endian. Depois disso, na segunda seção, usamos RAM $7E0000 como um ponteiro indireto e começamos a percorrer seus valores, usando `Y` como índice novamente. Continuamos o loop indefinidamente, até atingirmos um marcador de "fim dos dados", neste caso o valor `$FF`. Usamos esse método porque os níveis podem variar em comprimento. Também usamos `Y` 16-bit porque os dados de nível *podem* ter mais de 256 bytes de tamanho. Finalmente, terminamos a rotina definindo `Y` de volta para 8-bit e, em seguida, retornando.
 
-Este exemplo também mostra como usar ponteiros 24-bit em vez de ponteiros de 16-bits. A tabela de ponteiros contém valores longos. Usamos isso em combinação com um modo de endereçamento "direto, indireto *longo*" (ou seja, os colchetes).
+Este exemplo também mostra como usar ponteiros 24-bit em vez de ponteiros de 16-bit. A tabela de ponteiros contém valores longos. Usamos isso em combinação com um modo de endereçamento "direto, indireto *longo*" (ou seja, os colchetes).
 
 ## Pseudo matemática 16-bit
 É possível executar `ADC` e` SBC` 16-bit sem realmente alternar para o modo 16-bit. Na verdade, isso é bastante útil nos casos em que um valor 16-bit é armazenado em dois endereços separados como dois valores 8-bit. Isso é possível com a ajuda do flag carry, bem como o comportamento dos opcodes `ADC` e` SBC`.
 
-Pseudo 16-bit math also works with `INC` and `DEC`, although you'd have to use them on the addresses instead of the A, X and Y registers. By making clever usage of the negative flag, it's possible to perform pseudo 16-bit math with this opcode also.
+A pseudo matemática 16-bit também funciona com `INC` e` DEC`, embora você tenha que usá-los nos endereços ao invés dos registradores `A`, `X` e `Y`. Fazendo uso inteligente do flag negative, é possível realizar pseudo matemática 16-bit com estes opcodes também.
 
 ### ADC
-Here's an example of a pseudo 16-bit `ADC`:
+Abaixo um exemplo de um pseudo 16-bit `ADC`:
 
 ```
 LDA #$F0
-STA $00            ; Initialize address $7E0000 to value $F0 for this example
+STA $00            ; Inicializa o endereço $7E0000 como valor $F0
 LDA #$05
-STA $59            ; Initialize address $7E0059 to value $05 for this example
-                   ; These would make the 16-bit value $05F0
+STA $59            ; Inicializa o endereço $7E0059 como valor $05
+                   ; Isso geraria o valor 16-bit $05F0
 
-LDA $00            ; Load the value $F0 into A
-CLC                ; Clear Carry flag for addition. C = 0
+LDA $00            ; Carrega o valor $F0 em A
+CLC                ; Desabilita o flag carry para adição. C = 0
 ADC #$20           ; $F0+$20 = $10, C = 1
-STA $00            ; $7E0000 has now the value $10
+STA $00            ; $7E0000 agora tem o valor $10
 
-LDA $59            ; Load the value $05 into A
-ADC #$00           ; Add $00 to $7E0005. BUT because C = 1, this adds $01 to A instead
-STA $59            ; A is now $06, and we store it into $7E0059
-                   ; These would now make the 16-bit value $0610
-                   ; across two addresses
+LDA $59            ; Carrega o valor $05 em A
+ADC #$00           ; Adiciona $00 a $7E0005. MAS como C = 1, adiciona $01 em A
+STA $59            ; A agora é $06, e é armazenado em $7E0059
+                   ; Assim teríamos o valor 16-bit $0610
+                   ; em dois endereços
 ```
 The carry flag is set after the first `ADC`. This means that the value has wrapped back to `$00` and increased from there. Because the carry flag is set, the second `ADC` adds $00 + carry, thus `$01`, thus increasing the second address by one.
 
+O flag carry é habilitado após o primeiro `ADC`. Isso significa que o valor voltou para `$00` e aumentou a partir daí. Como o flag carry está habilitado, o segundo `ADC` adiciona $00 + carry, portanto,` $01`, aumentando assim o segundo endereço em um.
+
 ### SBC
-Here's an example of a pseudo 16-bit `SBC`:
+Abaixo um exemplo de um pseudo 16-bit `SBC`:
 
 ```
 LDA #$10
-STA $00            ; Initialize address $7E0000 to value $10 for this example
+STA $00            ; Inicializa o endereço $7E0000 com o valor $10
 LDA #$05
-STA $59            ; Initialize address $7E0059 to value $05 for this example
-                   ; These would make the 16-bit value $0510
+STA $59            ; Inicializa o endereço $7E0059 como valor $05
+                   ; Isso geraria o valor 16-bit $05F0
 
-LDA $00            ; Load the value $10 into A
-SEC                ; Set Carry flag for subtraction. C = 1
+LDA $00            ; Carrega o valor $F0 em A
+SEC                ; Habilita o flag carry para subtração. C = 1
 SBC #$20           ; $10-$20 = $F0, C = 0
-STA $00            ; $7E0000 has now the value $10
+STA $00            ; $7E0000 agora tem o valor $10
 
-LDA $59            ; Load the value $05 into A
-ADC #$00           ; Subtract $00 from $7E0005. BUT because C = 0, this subtracts $01 from A instead
-STA $59            ; A is now $04, and we store it into $7E0059
-                   ; These would now make the 16-bit value $04F0
-                   ; across two addresses
+LDA $59            ; Carrega o valor $05 em A
+ADC #$00           ; Subtrai $00 de $7E0005. MAS como C = 0, subtrai $01 de A
+STA $59            ; A agora é $04, e é armazenado em $7E0059
+                   ; Assim teríamos o valor 16-bit $04F0
+                   ; em dois endereços
 ```
-The carry flag is cleared after the first `SBC`. This means that the value has wrapped back to `$FF` and decreased from there. Because the carry flag is cleared, the second `SBC` subtracts $00 + carry, thus `$01`, thus decreasing the second address by one.
+O flag carry é desabilitado após o primeiro `SBC`. Isso significa que o valor voltou para `$FF` e diminuiu a partir daí. Como o flag carry está desabilitado, o segundo `SBC` subtrai $ 00 + carry, portanto` $01`, diminuindo assim o segundo endereço em um.
 
 ### INC
 Here's an example of a pseudo 16-bit `INC`:
@@ -383,11 +386,11 @@ Here's an example of a pseudo 16-bit `DEC`:
 As you can see, there's an extra check for the value $FF, because there's no shorthand way to check if the result of a `DEC` is exactly the value $FF. If the result indeed is the value `$FF`, then the other address needs to be decreased also.
 ```
 
-## ADC and SBC on X and Y
+## ADC e SBC em X e Y
 Increasing and decreasing A by a certain amount is easy because of `ADC` and `SBC`. However, these kind of instructions do not exist for X and Y. If you want to increase or decrease X and Y by a small amount, you would have to use `INX`, `DEX`, `INY` and `DEY`. This quickly gets impractical if you have to increase or decrease X and Y by great numbers (5 or more) though. In order to do that, you can temporarily transfer X or Y to A, then perform an `ADC` or `SBC`, then transfer it back to X or Y. 
 
-### Addition
-Here's an example using `ADC`:
+### Adição
+Abaixo um exemplo usando `ADC`:
 ```
 TXA                ; Transfer X to A. A = X
 CLC                ; 
@@ -396,8 +399,8 @@ TAX                ; Transfer A to X. X has now increased by $42
 ```
 By temporarily transferring X to A and back, the `ADC` practically is used on the X register, instead.
 
-### Subtraction
-Here's an example using `SBC`:
+### Subtração
+Abaixo um exemplo usando `SBC`:
 ```
 TXA                ; Transfer X to A. A = X
 SEC                ; 
