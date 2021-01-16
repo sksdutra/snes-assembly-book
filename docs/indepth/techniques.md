@@ -301,7 +301,7 @@ Este exemplo também mostra como usar ponteiros 24-bit em vez de ponteiros de 16
 A pseudo matemática 16-bit também funciona com `INC` e` DEC`, embora você tenha que usá-los nos endereços ao invés dos registradores `A`, `X` e `Y`. Fazendo uso inteligente do flag negative, é possível realizar pseudo matemática 16-bit com estes opcodes também.
 
 ### ADC
-Abaixo um exemplo de um pseudo 16-bit `ADC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `ADC`:
 
 ```
 LDA #$F0
@@ -319,14 +319,14 @@ LDA $59            ; Carrega o valor $05 em A
 ADC #$00           ; Adiciona $00 a $7E0005. MAS como C = 1, adiciona $01 em A
 STA $59            ; A agora é $06, e é armazenado em $7E0059
                    ; Assim teríamos o valor 16-bit $0610
-                   ; em dois endereços
+                   ; perpassando dois endereços
 ```
-The carry flag is set after the first `ADC`. This means that the value has wrapped back to `$00` and increased from there. Because the carry flag is set, the second `ADC` adds $00 + carry, thus `$01`, thus increasing the second address by one.
+O flag carry é definido após o primeiro `ADC`. Isso significa que o valor voltou para `$00` e aumenta a partir daí. Como o flag carry está habilitado, o segundo `ADC` adiciona $00 + carry, portanto,` $01`, aumentando assim o segundo endereço em um.
 
 O flag carry é habilitado após o primeiro `ADC`. Isso significa que o valor voltou para `$00` e aumentou a partir daí. Como o flag carry está habilitado, o segundo `ADC` adiciona $00 + carry, portanto,` $01`, aumentando assim o segundo endereço em um.
 
 ### SBC
-Abaixo um exemplo de um pseudo 16-bit `SBC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `SBC`:
 
 ```
 LDA #$10
@@ -344,47 +344,47 @@ LDA $59            ; Carrega o valor $05 em A
 ADC #$00           ; Subtrai $00 de $7E0005. MAS como C = 0, subtrai $01 de A
 STA $59            ; A agora é $04, e é armazenado em $7E0059
                    ; Assim teríamos o valor 16-bit $04F0
-                   ; em dois endereços
+                   ; perpassando dois endereços
 ```
 O flag carry é desabilitado após o primeiro `SBC`. Isso significa que o valor voltou para `$FF` e diminuiu a partir daí. Como o flag carry está desabilitado, o segundo `SBC` subtrai $ 00 + carry, portanto` $01`, diminuindo assim o segundo endereço em um.
 
 ### INC
-Here's an example of a pseudo 16-bit `INC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `INC`:
 
 ```
    LDA #$FF
-   STA $00          ; Initialize address $7E0000 to value $FF for this example
+   STA $00          ; Inicializa o endereço $7E0000 com o valor $FF
    LDA #$03
-   STA $59          ; Initialize address $7E0059 to value $03 for this example
-                    ; These would make the 16-bit value $$03FF
+   STA $59          ; Inicializa o endereço $7E0059 com o valor $03
+                    ; Isso irá compor o valor 16-bit $$03FF
 
-   INC $00          ; The value in $7E0000 is increased by 1, making it have the value $00
-   BNE +            ; This sets the zero flag, thus the branch is not taken
-   INC $59          ; Thus, the value in $7E0059 is also increased by 1
-+  RTS              ; These would now make the 16-bit value $0400
-                    ; across two addresses
+   INC $00          ; O valor em $7E0000 é incrementado em 1, gerando o valor $00
+   BNE +            ; Isso habilita o flag zero, assim o desvio não é feito
+   INC $59          ; Aqui, o valor em $7E0059 também é incrementado em 1
++  RTS              ; Isso geraria o valor 16-bit $0400
+                    ; perpassando dois endereços
 ```
-By making clever usage of the zero flag, we know that the result of `INC $00` is actually the value `$00`, because that's the only time the zero flag is set. If the result is indeed the value `$00`, then the other address needs to be increased also.
+Fazendo uso inteligente do flag zero, sabemos que o resultado de `INC $00` é na verdade o valor` $00`, porque é a única vez que o flag zero é definido. Se o resultado for realmente o valor `$00`, então o outro endereço também precisa ser incrementado.
 
 ### DEC
-Here's an example of a pseudo 16-bit `DEC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `DEC`:
 
 ```
    LDA #$00
-   STA $00          ; Initialize address $7E0000 to value $00 for this example
+   STA $00          ; Inicializa o endereço $7E0000 com o valor $00
    LDA #$03
-   STA $59          ; Initialize address $7E0059 to value $03 for this example
-                    ; These would make the 16-bit value $$0300
+   STA $59          ; Inicializa o endereço $7E0059 com o valor $03
+                    ; Isso irá compor o valor 16-bit $$0300
 
-   DEC $00          ; Decrease the value in $7E0000 by 1
-   LDA $00          ; If it results in $FF, then we wrapped from the value $00 to $FF
-   CMP #$FF         ; Thus, we need to decrease the value in $7E0059 also
+   DEC $00          ; Decrementa o valor em $7E0000 em 1
+   LDA $00          ; Se resultar em $FF, então passamos do valor $00 para $FF
+   CMP #$FF         ; Então, precisamos decrementar o valor em $7E0059 também
    BNE +
    DEC $59
-+  RTS              ; These would now make the 16-bit value $02FF
-                    ; across two addresses
-As you can see, there's an extra check for the value $FF, because there's no shorthand way to check if the result of a `DEC` is exactly the value $FF. If the result indeed is the value `$FF`, then the other address needs to be decreased also.
++  RTS              ; Isso geraria o valor 16-bit $02FF
+                    ; perpassando 2 endereços
 ```
+Como você pode ver, há uma verificação extra para o valor $FF, porque não há uma forma abreviada de verificar se o resultado de um `DEC` é exatamente o valor $FF. Se o resultado realmente for o valor `$FF`, então o outro endereço também precisa ser decrementado.
 
 ## ADC e SBC em X e Y
 Increasing and decreasing A by a certain amount is easy because of `ADC` and `SBC`. However, these kind of instructions do not exist for X and Y. If you want to increase or decrease X and Y by a small amount, you would have to use `INX`, `DEX`, `INY` and `DEY`. This quickly gets impractical if you have to increase or decrease X and Y by great numbers (5 or more) though. In order to do that, you can temporarily transfer X or Y to A, then perform an `ADC` or `SBC`, then transfer it back to X or Y. 
