@@ -77,7 +77,7 @@ Embora seja possível fazer um loop do início ao final de uma tabela, também �
 ```
    LDX.b #Table_end-Table-1 ; Recebe o comprimento da tabela ($03). O -1 é necessário, 
 -  LDA Table, x             ; senão o loop passará em 1. Esta linha usa o valor como contador
-   STA $00, x               ; Armazena os valores nos endereços $7E0003 a $7E0000, nessa ordem
+   STA $00, x               ; Armazena os valores nos endereços $7E0003 a $7E0000
    DEX                      ; Decrementa o contador em um
    BPL -                    ; Se o contador de loop não for negativo, continua
    RTS
@@ -110,56 +110,56 @@ Table:   db $01,$02,$04,$08
 ```
 Nesse caso, é possível percorrer 32.769 bytes de dados no máximo.
 
-### Looping with an "end-of-data" check.
-This method basically keeps looping and iterating through values, until it reaches some kind of an "end-of-data" marker. Generally speaking, this value is something that the code normally never uses as an actual value. In most cases, it is the value `$FF` or `$FFFF`, although the decision is entirely up to the programmer. Here's an example which uses such a marker.
+### Loop checando o fim dos dados
+Esse método basicamente mantém o loop e a iteração através dos valores, até atingir algum tipo de marcador de "fim dos dados". De modo geral, esse valor é algo que o código normalmente nunca usa como um valor real. Na maioria dos casos, é o valor `$FF` ou` $FFFF`, embora a decisão seja inteiramente do programador. Aqui está um exemplo que usa esse marcador.
 
-This type of loop is especially handy when it needs to process multiple tables with the exact same logic, but with varying table sizes. One example of such implementation is loading levels; The logic to parse levels is always the same, but the levels vary in size. 
+Esse tipo de loop é especialmente útil quando ele precisa processar várias tabelas com a mesma lógica, mas com tamanhos de tabela variados. Um exemplo de tal implementação são os carregamentos de níveis; A lógica para analisar os níveis é sempre a mesma, mas os níveis variam em tamanho.
 
 ```
-   LDX.b #$00      ; Initialize the index
--  LDA Table,x     ; Read the value from the data table
-   CMP #$FF        ; If it's an end-of-data marker, then exit the loop.
+   LDX.b #$00      ; Inicializa o indexador.
+-  LDA Table,x     ; Lê o valor da tabela de dados.
+   CMP #$FF        ; Se fot o marcador de fim dos dados, sai do loop.
    BEQ +
-   STA $00,x       ; If it's not, then store the value.
-   INX             ; Increase the index to the table
-   BRA -           ; Continue the loop
+   STA $00,x       ; Caso contrário, armazena o valor.
+   INX             ; Incrementa o index para a tabela
+   BRA -           ; Continua o loop
 +  RTS
 
 Table:   db $01,$02,$04,$FF
 .end
 ```
-In the case of this example, the code loops through four bytes of data, three of which are actual data and one of which is the end-of-data marker. Once the loop encounters this marker, in this case the value `$FF`, the loop is immediately terminated.
+No caso deste exemplo, o código percorre quatro bytes de dados, três dos quais são dados reais e um dos quais é o marcador de fim dos dados. Assim que o loop encontrar este marcador, neste caso o valor `$FF`, o loop é encerrado imediatamente.
 
 ## Bigger branch reach
-In the [branches chapter](../programming/branches), it is mentioned that branches have a limited distance of -128 to 127 bytes. When you do exceed that limit, the assembler automatically detects that and throws some kind of error, such as the following:
+No capítulo [comparações, desvios e labels](../programming/branches), é mencionado que os ramos têm uma distância limitada de -128 a 127 bytes. Quando você excede esse limite, o montador detecta isso automaticamente e lança algum tipo de erro, como o seguinte:
 
 ```
             LDA $00
             CMP #$03
-            BEQ SomeLabel ; Branch when address $7E0000 contains the value $03
-            NOP #1000     ; 1000 times "NOP"
+            BEQ SomeLabel ; Desvia quando o endereço $7E0000 contiver o valor $03
+            NOP #1000     ; 1000 vezes "NOP"
 SomeLabel:  RTS
 ```
-Would cause the following error:
+Esse código causará o seguinte erro:
 ```
 file.asm:3: error: (E5037): Relative branch out of bounds. (Distance is 1000). [BEQ SomeLabel]
 ```
-This means that the distance between the branch and the label is 1000 bytes, which definitely exceeds the 127 bytes limit. If you necessarily have to jump to that one label, you can invert the conditional and make use of the `JMP` opcode for a longer jump reach:
+Isso significa que a distância entre o desvio e o label é de 1000 bytes, o que definitivamente excede o limite de 127 bytes. Se você necessariamente tem que pular para aquele label, você pode inverter a condicional e usar o opcode `JMP` para um alcance de salto mais longo:
 
 ```
             LDA $00
             CMP #$03
-            BNE +         ; Skip the jump when address $7E0000 doesn't contain the value $03
-            JMP SomeLabel ; This runs when address $7E0000 *does* contain the value $03
+            BNE +         ; Salta o pulo quando endereõ $7E0000 não contiver o valor $03
+            JMP SomeLabel ; Esse salto ocorrerá se o endereço $7E0000 contiver o valor $03
 
-+           NOP #1000     ; Shorthand for 1000 times "NOP"
++           NOP #1000     ; 1000 vezes "NOP"
 SomeLabel:  RTS
 ```
 
-This way, the logic still remains the same, namely, the thousand NOPs run when address $7E0000 doesn't contain the value $03. The out-of-bounds error is solved. Additionally, replacing the `JMP` with `JML` will allow you to jump *anywhere* instead of being restricted to the current bank.
+Dessa forma, a lógica continua a mesma, ou seja, os mil NOPs rodam quando o endereço $7E0000 não contém o valor $03. O erro fora dos limites foi resolvido. Além disso, substituir o `JMP` por` JML` permitirá que você pule *para qualquer lugar* em vez de ficar restrito ao banco atual.
 
-## Pointer tables
-A pointer table is a table with a list of pointers. Depending on the context, the pointers can either point to code or data. Pointer tables are especially useful if you need to run certain routines or access certain data for an exhaustive list of values. Without pointer tables, you would have to do a massive amount of manual comparisons instead. Here's an example of a manual version:
+## Tabelas de ponteiros
+Uma tabela de ponteiros é uma tabela com uma lista de ponteiros. Dependendo do contexto, os ponteiros podem apontar para código ou dados. As tabelas de ponteiros são especialmente úteis se você precisar executar certas rotinas ou acessar certos dados para uma lista exaustiva de valores. Sem as tabelas de ponteiros, você teria que fazer uma grande quantidade de comparações manuais. Aqui está um exemplo de uma versão manual:
 
 ```
   LDA $14
@@ -192,33 +192,34 @@ ThirdRoutine:
   STA $15
   RTS
 ```
-You can imagine that with a lot of values that are associated with routines, this comparison logic can get huge pretty quickly. This is where pointer tables come in handy.
+Você pode imaginar que, com muitos valores associados a rotinas, essa lógica de comparação pode ficar enorme rapidamente. É aqui que as tabelas de ponteiros são úteis.
 
-This here is a pointer table:
+Isto aqui é uma tabela de ponteiros:
+
 ```
 Pointers: dw Label1
           dw Label2
           dw Label3
           dw Label4
 ```
-As you can see, it's nothing but a bunch of table entries pointing somewhere. You can use labels in order to point to ROM, or defines to point to RAM.
+Como você pode ver, nada mais é do que um monte de entradas de tabela apontando para algum lugar. Você pode usar rótulos para apontar para ROM ou definições para apontar para RAM.
 
-### Pointer tables for code
-There are a few instructions designed for making use of pointer tables. They are as follows:
+### Tabelas de ponteiros para código
+Há algumas instruções projetadas para fazer uso de tabelas de ponteiros. São as seguintes:
 
-|Instruction|Example|Explanation|
+|Instrução|Exemplo|Explicação|
 |-|-|-|
-|**JMP (*absolute address*)**|JMP ($0000)|Jumps to the absolute address located at address $7E0000|
-|**JMP (*absolute address*,x)**|JMP ($0000,x)|Jumps to the absolute address located at address $7E0000, which is indexed by X|
-|**JML [*absolute address*]**|JML [$0000]|Jumps to the long address located at address $7E0000|
-|**JSR (*absolute address*,x)**|JSR ($0000,x)|Jumps to the absolute address located at address $7E0000, which is indexed by X, then returns|
-With these opcodes, as well as a pointer table, it is possible to run a subroutine depending on the value of a certain RAM address. Here's an example which runs a routine depending on the value of RAM address $7E0014:
+|**JMP (*absolute address*)**|JMP ($0000)|Salta para um endereço absoluto localizado no endereço $7E0000.|
+|**JMP (*absolute address*,x)**|JMP ($0000,x)|Salta para um endereço absoluto localizado no endereço $7E0000, que é indexado por `X`.|
+|**JML [*absolute address*]**|JML [$0000]|Salta para um endereço longo, localizado no endereço $7E0000.|
+|**JSR (*absolute address*,x)**|JSR ($0000,x)|Salta para um endereço absoluto localizado em $7E0000, que é indexado por `X`, então retorna.|
+Com estes opcodes, assim como uma tabela de ponteiros, é possível executar uma subotina dependendo do valor de um determinado endereço de RAM. Aqui está um exemplo que executa uma rotina dependendo do valor do endereço da RAM $7E0014:
 
 ```
-LDA $14            ; Load the value into A...
-ASL A              ; ...Multiply it by two...
-TAX                ; ...then transfer it into X
-JSR (Pointers,x)   ; Execute routines.
+LDA $14            ; Carrega o valor em A...
+ASL A              ; ...Multiplica-o por dois...
+TAX                ; ...e o transfere para X
+JSR (Pointers,x)   ; Executa rotinas.
 RTS
 
 Pointers: dw Label1 ; $7E0014 = $00
@@ -242,35 +243,35 @@ Label4:   LDA #$55
           STA $66
           RTS
 ```
-The short explanation is that depending on the value of RAM address $14, the four routines are executed. For value `$00`, the routine at `Label1` is executed. For value `$01`, the routine at `Label2` is executed, and so on.
+A explicação rápida é que dependendo do valor do endereço da RAM $14, as quatro rotinas são executadas. Para o valor `$00`, a rotina em` Label1` é executada. Para o valor `$01`, a rotina em` Label2` é executada e assim por diante.
 
-The long explanation is that we load the value into A and multiply it by two, because we use *words* for our pointer tables. Thus, we need to index every two bytes instead of every byte. This means that value `$00` stays as index value `$00` thus reading the `Label1` pointer. Value `$01` becomes index value `$02`, thus reading the `Label2` pointer. Value `$02` becomes index value `$04`, thus reading the `Label3` pointer. Value `$03` becomes index value `$06`, thus reading the `Label4` pointer. Because the JSR uses an "absolute, indirect" addressing mode, the labels are also absolute, thus they only run in the same bank as that JSR.
+A explicação detalhada é que carregamos um valor em A e o multiplicamos por dois, porque usamos *words* para nossas tabelas de ponteiros. Portanto, precisamos indexar a cada dois bytes em vez de cada byte. Isso significa que o valor `$00` permanece como valor de indexação ` $00`, portanto, lendo o ponteiro `Label1`. O valor `$01` torna-se o valor de indexação ` $02`, lendo assim o ponteiro `Label2`. O valor `$02` torna-se o valor de indexação ` $04`, lendo assim o ponteiro `Label3`. O valor `$03` torna-se o valor de índice` $06`, lendo assim o ponteiro `Label4`. Como o JSR usa um modo de endereçamento "absoluto, indireto", os labels também são absolutos, portanto, eles só são executados no mesmo banco que esse JSR.
 
-### Pointer tables for data
-The same concept can be applied for data (i.e. tables). Imagine you want to read level data, depending on the level number. A pointer table would be a perfect solution for that. Here's an example:
+### Tabelas de ponteiros para dados
+O mesmo conceito pode ser aplicado para dados (ou seja, tabelas). Imagine que você deseja ler os dados do nível, dependendo do número do nível. Uma tabela de ponteiros seria uma solução perfeita para isso. Aqui está um exemplo:
 
 ```
-  LDA $14            ; Load the level number into A...
-  ASL A              ; ...Multiply it by three...
+  LDA $14            ; Carrega o número do nível em A...
+  ASL A              ; ...Multiplica-o por três...
   CLC
   ADC $14
-  TAY                ; ...then transfer it into Y
+  TAY                ; ...e então o transfere para Y
   LDA Pointers,y
   STA $00
   LDA Pointers+1,y
   STA $01
-  LDA Pointers+2,y ; Store the pointed address into RAM
-  STA $01          ; To use as an indirect pointer
+  LDA Pointers+2,y ; Armazena o endereço apontado na RAM
+  STA $01          ; Para usar um ponteiro indireto
 
   REP #$10
   LDY #$0000
-- LDA [$00],Y      ; Read level data until you reach an end-of-data marker
+- LDA [$00],Y      ; Lê os dados o nível até que alcance o marcado de fim dos dados
   CMP #$FF
   BEQ Return
 
   INY
   BRA -
-  ; Do something with level data here
+  ; Faz alguma coisa com os dados do nível
   
 Return:
   SEP #$10
@@ -289,12 +290,12 @@ Level3:   db $D9,$B0,$A0,$21,$FF
 
 Level4:   db $C0,$92,$84,$81,$82,$99,$FF
 ```
-In the first section, we use the same concept of multiplying a value to access a pointer table. Except this time, we multiply by three, because the pointer tables contain values that are *long*. We use this value as an index to the pointer table, and store the pointer in RAM $7E0000 to $7E0002, in little endian. After that, in the second section, we use RAM $7E0000 as an indirect pointer and start looping through its values, using Y as an index again. We keep looping indefinitely, until we hit an "end-of-data" marker, in this case the value `$FF`. We use this method because levels could be variable in length. We also use 16-bit Y because level data *could* be bigger than 256 bytes in size. Finally, we finish the routine by setting Y back to 8-bit and then returning.
+Na primeira seção, usamos o mesmo conceito de multiplicação de um valor para acessar uma tabela de ponteiros. Exceto que desta vez, multiplicamos por três, porque as tabelas de ponteiros contêm valores que são *longos*. Usamos este valor como um indexador para a tabela de ponteiros e armazenamos o ponteiro na RAM de $7E0000 a $7E0002, em little-endian. Depois disso, na segunda seção, usamos RAM $7E0000 como um ponteiro indireto e começamos a percorrer seus valores, usando `Y` como índice novamente. Continuamos o loop indefinidamente, até atingirmos um marcador de "fim dos dados", neste caso o valor `$FF`. Usamos esse método porque os níveis podem variar em comprimento. Também usamos `Y` 16-bit porque os dados de nível *podem* ter mais de 256 bytes de tamanho. Finalmente, terminamos a rotina definindo `Y` de volta para 8-bit e, em seguida, retornando.
 
-This example also shows how to use 24-bit pointers rather than 16-bit pointers. The pointer table contains long values. We use this in combination with a "direct, indirect *long*" addressing mode (i.e. the square brackets).
+Este exemplo também mostra como usar ponteiros 24-bit em vez de ponteiros de 16-bits. A tabela de ponteiros contém valores longos. Usamos isso em combinação com um modo de endereçamento "direto, indireto *longo*" (ou seja, os colchetes).
 
-## Pseudo 16-bit math
-It is possible to perform 16-­bit `ADC` and `SBC` without actually switching to 16-­bit mode. This is actually quite useful in cases a 16-bit value is stored across two separate addresses as two 8-bit values. This is possible with the help of the carry flag as well as the behaviour of the opcodes `ADC` and `SBC`.
+## Pseudo matemática 16-bit
+É possível executar `ADC` e` SBC` 16-bit sem realmente alternar para o modo 16-bit. Na verdade, isso é bastante útil nos casos em que um valor 16-bit é armazenado em dois endereços separados como dois valores 8-bit. Isso é possível com a ajuda do flag carry, bem como o comportamento dos opcodes `ADC` e` SBC`.
 
 Pseudo 16-bit math also works with `INC` and `DEC`, although you'd have to use them on the addresses instead of the A, X and Y registers. By making clever usage of the negative flag, it's possible to perform pseudo 16-bit math with this opcode also.
 
