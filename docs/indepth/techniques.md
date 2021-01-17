@@ -1,8 +1,8 @@
-# Techniques
-This chapter focuses on general techniques you can use in SNES ASM.
+# Técnicas
+Nesse capítulo focaremos em técnicas gerais que você pode usar no ASM de SNES.
 
-## Byte counting
-Each instruction assembles into one or more bytes. This happens as follows: First, the opcode is guaranteed assembled into a byte. Then the byte is followed by 0-3 bytes which serves as the parameter of the opcode. Every 2 hex digits equals 1 byte. This means that the maximum amount of bytes an instruction in SNES can use, is four bytes: opcode + a 24-bit parameter. Here is an example on how LDA would look like, when it's assembled with different addressing modes:
+## Contagem de bytes
+Cada instrução é montada em um ou mais bytes. Isso acontece como se segue: primeiro, o opcode é garantidamente montado em um byte. Em seguida, o byte é seguido por 0-3 bytes, que serve como parâmetro do opcode. Cada 2 dígitos hexadecimais é igual a 1 byte. Isso significa que a quantidade máxima de bytes que uma instrução em SNES pode usar é de quatro bytes: opcode + um parâmetro de 24-bit. Aqui está um exemplo de como seria o LDA, quando montado com diferentes modos de endereçamento:
 
 ```
 LDA #$00           ; A9 00
@@ -12,14 +12,16 @@ LDA $0011          ; AD 11 00
 LDA $001122        ; AF 22 11 00
 ```
 
-An instruction without a hexadecimal parameter is only 1 byte, like `INC A` or `TAX`. An instruction with an 8-bit parameter is 2 bytes, like `LDA #$00`. An instruction with a 16-bit parameter is 3 bytes, like `LDA $0000`. An instruction with a 24-bit parameter is 4 bytes, like `LDA $000000`. It doesn’t matter if the addressing mode is indexed, direct indirect or something else. It all depends on the length of the `$`-value.
+Uma instrução sem um parâmetro hexadecimal tem apenas 1 byte, como `INC A` ou` TAX`. Uma instrução com um parâmetro 8-bit tem 2 bytes, como `LDA #$00`. Uma instrução com um parâmetro 16-bit tem 3 bytes, como `LDA $0000`. Uma instrução com um parâmetro 24-bit tem 4 bytes, como `LDA $000000`. Não importa se o modo de endereçamento é indexado, indireto direto ou outro. Tudo depende do comprimento do valor `$`.
 
-## Shorthand zero comparison
-Faster comparison makes use of processor flags effectively, because branches actually depend on the processor flags. As mentioned in this tutorial earlier, `BEQ` branches if the zero flag is set, `BNE` branches if the zero flag is clear, `BCC` branches if the carry flag is clear, and so on. 
+## Abreviando as comparações com zero
+A comparação mais rápida usa os flags do processador de forma eficaz, pois os desvios dependem, na verdade, dos flags do processador. Conforme mencionado neste tutorial anteriormente, `BEQ` efetua o desvio se o flag zero estiver habilitado,` BNE` efetua o desvio se o flag zero estiver desabilitado, `BCC` efetua o desvio se o flag carry estiver desabilitado e assim por diante.
 
-Often, if the result of ​any​ operation is zero (`$00`, or `$0000` in 16-bit mode), the zero flag gets set. For example, if you do `LDA #$00`, the zero flag is set. Nearly all opcodes which modify an address or register affect the zero flag.
+Em geral, se o resultado de qualquer operação for zero (`$00` ou `$0000` no modo 16-bit), o flag zero é habilitado. Por exemplo, se você executar `LDA #$00`, o flag zero será habilitado. Quase todos os opcodes que modificam um endereço ou registrador afetam o flag zero.
 
 By making use of the zero flag, it's possible to check if a certain instruction has zero as its result (including loads). This way, you can write shorthand methods to check if an address actually contains the value `$00` or `$0000`. Here's an example:
+
+Usando o flag zero, é possível verificar se uma determinada instrução tem como resultado zero (incluindo carregamentos). Assim, você pode escrever métodos abreviados para verificar se um endereço realmente contém o valor `$00` ou` $0000`. Como no exemplo abaixo:
 
 ```
 LDA $59
@@ -31,9 +33,10 @@ STA $02
 IsZero:
 RTS
 ```
-This code checks if address $7E0059 contains the value `$00`. If it does contain this value, then it immediately returns. If it does not contain the value `$00`, then it stores the value `$01` into address $7E0002.
+Esse código checa se o endereço $7E0059 contém o valor $00. Se ele contiver, então imediatamente retorna, caso contrário, armazena o valor $01 no endereço $7E0002.
 
-The reverse is also possible: checking if an address does *not* contain zero. here's an example:
+O contrário também é possível. Checar se um endereço *não* contém zero, eis um exemplo:
+
 ```
 LDA $59
 BNE IsNotZero
@@ -44,117 +47,119 @@ STA $02
 IsNotZero:
 RTS
 ```
-This code checks if address $7E0059 does *not* contain the value `$00`. If it indeed does not contain this value, then it immediately returns. If it does contain the value `$00`, then it stores the value `$01` into address $7E0002, instead.
+Esse código checa se o endereço $7E0059 *não* contém o valor $00. Se ele *não* contiver, então imediatamente retorna, caso contrário, armazena o valor $01 no endereço $7E0002.
 
 ## Looping
-Loops are certain type of code flow which allow you to execute code repeatedly. It is especially useful when you need to read out a table or a memory region value-by-value. A practical example is reading out level data from the SNES ROM, in order to build a playable level. Levels are essentially a long list of object and sprite data, therefore, this data can be read out in a repetetive way, until you reach the end of such data.
+Os loops podem ser descritos como fluxo de código que permite a você executar código repetidamente. É muito útil quando você precisa ler uma tabela ou uma região de memória valor por valor. Um exemplo prático é a leitura de dados de nível da ROM do SNES, a fim de construir um nível jogável. Os níveis são uma longa lista de dados de objetos e sprites, portanto, esses dados podem ser lidos de forma repetitiva, até chegar ao fim dos mesmos.
 
-The examples within this section only loops through tables to copy them to RAM addresses, but of course, loops can be used to implement much more complex logic.
+Os exemplos nesta seção apenas percorrem as tabelas para copiá-las para endereços de RAM, mas é claro, os loops podem ser usados para implementar uma lógica muito mais complexa.
 
-### Looping with a loop counter check
-It's possible to loop from the beginning to the end of a table. The following code demonstrates this.
+### Looping com verificação de um contador
+É possível criar um loop do início ao fim de uma tabela. O código a seguir demonstra isso:
 
 ```
-   LDX.b #$00      ; Initialize the loop counter
--  LDA Table,x     ; Reads out the values in the table
-   STA $00,x       ; Store them to addresses $7E0000-$7E0003
-   INX             ; Increase loop counter by one
-   CPX.b #Table_end-Table ; Use the size of the table as the check
-   BNE -           ; If the loop counter doesn't equal this, then continue looping.
+   LDX.b #$00      ; Iniciliza o contador do loop
+-  LDA Table, x    ; Lê os valores na tabela
+   STA $00, x      ; Armazena os valores nos endereços $7E0000-$7E0003
+   INX             ; Incrementa o contador em um
+   CPX.b #Table_end-Table ; Usa o tamanho da tabela como checagem
+   BNE -           ; Se o contador e a checagem não forem iguais, o loop continua
    RTS
 
-Table:   db $01,$02,$04,$08 ; The values are read out in order
+Table:   db $01,$02,$04,$08 ; Os valores são lidos nessa ordem
 .end
 ```
-The code initializes the loop counter with the value `$00`. With every iteration, this loop counter increases by one, and is then compared with the size of the table. Therefore, the loop executes for every byte within this table.
+Esse código inicializa um contador para o loop com o valor $00. A cada iteração, esse loop incrementa o contador em um e, então, o compara com o tamanho da tabela. Assim, o loop executa para cada byte nesta tabela.
 
-### Looping with a negative check
-While it's possible to loop from the beginning towards the end of a table, it's also possible to loop from the end towards the beginning of the table. This method has a "shorthand" check in order to see if the loop should be terminated, by making clever use of the "negative" processor flag. When using this method, your loop will essentially run backwards.
+### Looping com uma checagem negativa
+Embora seja possível fazer um loop do início ao final de uma tabela, também é possível fazer um loop do final em direção ao início da tabela. Este método tem uma verificação "abreviada" para ver se o loop deve ser encerrado, fazendo uso inteligente do flag de processador "negative". Ao usar este método, seu loop irá essencialmente rodar para trás.
 
 ```
-   LDX.b #Table_end-Table-1 ; Get the length of the table ($03). The -1 is necessary, 
--  LDA Table,x              ; else the loop will be off-by-one. Use that as a loop counter.
-   STA $00,x                ; One by one store the values to addresses $7E0003 to $7E0000, in that order.
-   DEX                      ; Decrease the loop counter by one.
-   BPL -                    ; If the loop counter isn't negative, continue looping.
+   LDX.b #Table_end-Table-1 ; Recebe o comprimento da tabela ($03). O -1 é necessário, 
+-  LDA Table, x             ; senão o loop passará em 1. Esta linha usa o valor como contador
+   STA $00, x               ; Armazena os valores nos endereços $7E0003 a $7E0000
+   DEX                      ; Decrementa o contador em um
+   BPL -                    ; Se o contador de loop não for negativo, continua
    RTS
 
-Table:   db $01,$02,$04,$08 ; The values are read out backwards as well
+Table:   db $01,$02,$04,$08 ; Os valores serão lidos na ordem inversa
 .end
 ```
-Because the loop counter serves as an index to address $7E0000, as well as the table, it reads and stores the values in a backwards order, as the counter starts with the value `$03`.
+Como o contador de loops serve como um índice para endereçar $7E0000, assim como a tabela, ele lê e armazena os valores em ordem inversa, já que o contador começa com o valor `$03`.
 
-The `BPL` ensures that the loop breaks once the loop counter reaches the value `$FF`. That means the negative flag will be set, thus BPL will not branch to the beginning of the loop.
+O `BPL` garante que o loop será interrompido assim que o contador de loop atingir o valor` $FF`. Isso significa que o sinalizador negativo será definido, portanto, o BPL não ramificará para o início do loop. 
 
-This loop method has a drawback however. When the loop counter is `$81-$FF`, the loop will execute once, then break immediately, as BPL will not branch. This is because after `DEX`, the loop counter is immediately negative. Remember that values `$80` to `$FF` are considered negative. However, if your initial loop counter is `$80`, it will first execute the code within the loop, decrease the loop counter by 1, *then* check if the loop counter is negative. Therefore with this loop, you can loop through 129 bytes of data at most.
+No entanto, esse método de loop tem uma desvantagem. Quando o contador de loop é `$81- $FF`, o loop será executado uma vez e será interrompido imediatamente, pois o BPL não se ramificará. Isso ocorre porque depois de `DEX`, o contador de loop é imediatamente negativo. Lembre-se de que os valores de `$80` a` $FF` são considerados negativos. No entanto, se seu contador de loop inicial for `$80`, ele executará primeiro o código dentro do loop, diminuirá o contador de loop em 1, *e  então* verificará se o contador de loop é negativo. Portanto, com esse loop, você pode percorrer 129 bytes de dados no máximo.
 
 It's also possible to have the loop counter at 16-bit mode while having the accumulator at 8-bit mode. The following example demonstrates this:
 
+Também é possível ter o contador de loop no modo de 16-bit enquanto o acumulador está no modo de 8-bit. O exemplo a seguir demonstra isso:
+
 ```
    REP #$10
-   LDX.w #Table_end-Table-1 ; Get the length of the table ($03). Notice the ".w" to force
--  LDA Table,x              ; the assembler to use a 16-bit value.
-   STA $00,x                ; One by one store the values into address $7E0000-$7E0003.
-   DEX                      ; Decrease the loop counter by one.
-   BPL -                    ; If the loop counter isn't negative, continue looping.
+   LDX.w #Table_end-Table-1 ; Recebe o comprimento da tabela ($03). Perceba o ".w" que força
+-  LDA Table,x              ; o assembler a usar um valor 16-bit
+   STA $00,x                ; Armazena os valores nos endereços $7E0000-$7E0003
+   DEX                      ; Decrementa o contador em 1
+   BPL -                    ; Se o contador de loop não for negativo, continua
    SEP #$10
    RTS
 
 Table:   db $01,$02,$04,$08
 .end
 ```
-In this case, it's possible to loop through ‭32769 bytes of data at most.
+Nesse caso, é possível percorrer 32.769 bytes de dados no máximo.
 
-### Looping with an "end-of-data" check.
-This method basically keeps looping and iterating through values, until it reaches some kind of an "end-of-data" marker. Generally speaking, this value is something that the code normally never uses as an actual value. In most cases, it is the value `$FF` or `$FFFF`, although the decision is entirely up to the programmer. Here's an example which uses such a marker.
+### Loop checando o fim dos dados
+Esse método basicamente mantém o loop e a iteração através dos valores, até atingir algum tipo de marcador de "fim dos dados". De modo geral, esse valor é algo que o código normalmente nunca usa como um valor real. Na maioria dos casos, é o valor `$FF` ou` $FFFF`, embora a decisão seja inteiramente do programador. Aqui está um exemplo que usa esse marcador.
 
-This type of loop is especially handy when it needs to process multiple tables with the exact same logic, but with varying table sizes. One example of such implementation is loading levels; The logic to parse levels is always the same, but the levels vary in size. 
+Esse tipo de loop é especialmente útil quando ele precisa processar várias tabelas com a mesma lógica, mas com tamanhos de tabela variados. Um exemplo de tal implementação são os carregamentos de níveis; A lógica para analisar os níveis é sempre a mesma, mas os níveis variam em tamanho.
 
 ```
-   LDX.b #$00      ; Initialize the index
--  LDA Table,x     ; Read the value from the data table
-   CMP #$FF        ; If it's an end-of-data marker, then exit the loop.
+   LDX.b #$00      ; Inicializa o indexador.
+-  LDA Table,x     ; Lê o valor da tabela de dados.
+   CMP #$FF        ; Se fot o marcador de fim dos dados, sai do loop.
    BEQ +
-   STA $00,x       ; If it's not, then store the value.
-   INX             ; Increase the index to the table
-   BRA -           ; Continue the loop
+   STA $00,x       ; Caso contrário, armazena o valor.
+   INX             ; Incrementa o index para a tabela
+   BRA -           ; Continua o loop
 +  RTS
 
 Table:   db $01,$02,$04,$FF
 .end
 ```
-In the case of this example, the code loops through four bytes of data, three of which are actual data and one of which is the end-of-data marker. Once the loop encounters this marker, in this case the value `$FF`, the loop is immediately terminated.
+No caso deste exemplo, o código percorre quatro bytes de dados, três dos quais são dados reais e um dos quais é o marcador de fim dos dados. Assim que o loop encontrar este marcador, neste caso o valor `$FF`, o loop é encerrado imediatamente.
 
-## Bigger branch reach
-In the [branches chapter](../programming/branches), it is mentioned that branches have a limited distance of -128 to 127 bytes. When you do exceed that limit, the assembler automatically detects that and throws some kind of error, such as the following:
+## Maior alcance para os desvios
+No capítulo [comparações, desvios e labels](../programming/branches), é mencionado que os ramos têm uma distância limitada de -128 a 127 bytes. Quando você excede esse limite, o montador detecta isso automaticamente e lança algum tipo de erro, como o seguinte:
 
 ```
             LDA $00
             CMP #$03
-            BEQ SomeLabel ; Branch when address $7E0000 contains the value $03
-            NOP #1000     ; 1000 times "NOP"
+            BEQ SomeLabel ; Desvia quando o endereço $7E0000 contiver o valor $03
+            NOP #1000     ; 1000 vezes "NOP"
 SomeLabel:  RTS
 ```
-Would cause the following error:
+Esse código causará o seguinte erro:
 ```
 file.asm:3: error: (E5037): Relative branch out of bounds. (Distance is 1000). [BEQ SomeLabel]
 ```
-This means that the distance between the branch and the label is 1000 bytes, which definitely exceeds the 127 bytes limit. If you necessarily have to jump to that one label, you can invert the conditional and make use of the `JMP` opcode for a longer jump reach:
+Isso significa que a distância entre o desvio e o label é de 1000 bytes, o que definitivamente excede o limite de 127 bytes. Se você necessariamente tem que pular para aquele label, você pode inverter a condicional e usar o opcode `JMP` para um alcance de salto mais longo:
 
 ```
             LDA $00
             CMP #$03
-            BNE +         ; Skip the jump when address $7E0000 doesn't contain the value $03
-            JMP SomeLabel ; This runs when address $7E0000 *does* contain the value $03
+            BNE +         ; Salta o pulo quando endereõ $7E0000 não contiver o valor $03
+            JMP SomeLabel ; Esse salto ocorrerá se o endereço $7E0000 contiver o valor $03
 
-+           NOP #1000     ; Shorthand for 1000 times "NOP"
++           NOP #1000     ; 1000 vezes "NOP"
 SomeLabel:  RTS
 ```
 
-This way, the logic still remains the same, namely, the thousand NOPs run when address $7E0000 doesn't contain the value $03. The out-of-bounds error is solved. Additionally, replacing the `JMP` with `JML` will allow you to jump *anywhere* instead of being restricted to the current bank.
+Dessa forma, a lógica continua a mesma, ou seja, os mil NOPs rodam quando o endereço $7E0000 não contém o valor $03. O erro fora dos limites foi resolvido. Além disso, substituir o `JMP` por` JML` permitirá que você pule *para qualquer lugar* em vez de ficar restrito ao banco atual.
 
-## Pointer tables
-A pointer table is a table with a list of pointers. Depending on the context, the pointers can either point to code or data. Pointer tables are especially useful if you need to run certain routines or access certain data for an exhaustive list of values. Without pointer tables, you would have to do a massive amount of manual comparisons instead. Here's an example of a manual version:
+## Tabelas de ponteiros
+Uma tabela de ponteiros é uma tabela com uma lista de ponteiros. Dependendo do contexto, os ponteiros podem apontar para código ou dados. As tabelas de ponteiros são especialmente úteis se você precisar executar certas rotinas ou acessar certos dados para uma lista exaustiva de valores. Sem as tabelas de ponteiros, você teria que fazer uma grande quantidade de comparações manuais. Aqui está um exemplo de uma versão manual:
 
 ```
   LDA $14
@@ -187,33 +192,35 @@ ThirdRoutine:
   STA $15
   RTS
 ```
-You can imagine that with a lot of values that are associated with routines, this comparison logic can get huge pretty quickly. This is where pointer tables come in handy.
+Você pode imaginar que, com muitos valores associados a rotinas, essa lógica de comparação pode ficar enorme rapidamente. É aqui que as tabelas de ponteiros são úteis.
 
-This here is a pointer table:
+Isto aqui é uma tabela de ponteiros:
+
 ```
 Pointers: dw Label1
           dw Label2
           dw Label3
           dw Label4
 ```
-As you can see, it's nothing but a bunch of table entries pointing somewhere. You can use labels in order to point to ROM, or defines to point to RAM.
+Como você pode ver, nada mais é do que um monte de entradas de tabela apontando para algum lugar. Você pode usar rótulos para apontar para ROM ou definições para apontar para RAM.
 
-### Pointer tables for code
-There are a few instructions designed for making use of pointer tables. They are as follows:
+### Tabelas de ponteiros para código
+Há algumas instruções projetadas para fazer uso de tabelas de ponteiros. São as seguintes:
 
-|Instruction|Example|Explanation|
+|Instrução|Exemplo|Explicação|
 |-|-|-|
-|**JMP (*absolute address*)**|JMP ($0000)|Jumps to the absolute address located at address $7E0000|
-|**JMP (*absolute address*,x)**|JMP ($0000,x)|Jumps to the absolute address located at address $7E0000, which is indexed by X|
-|**JML [*absolute address*]**|JML [$0000]|Jumps to the long address located at address $7E0000|
-|**JSR (*absolute address*,x)**|JSR ($0000,x)|Jumps to the absolute address located at address $7E0000, which is indexed by X, then returns|
-With these opcodes, as well as a pointer table, it is possible to run a subroutine depending on the value of a certain RAM address. Here's an example which runs a routine depending on the value of RAM address $7E0014:
+|**JMP (*absolute address*)**|JMP ($0000)|Salta para um endereço absoluto localizado no endereço $7E0000.|
+|**JMP (*absolute address*,x)**|JMP ($0000,x)|Salta para um endereço absoluto localizado no endereço $7E0000, que é indexado por `X`.|
+|**JML [*absolute address*]**|JML [$0000]|Salta para um endereço longo, localizado no endereço $7E0000.|
+|**JSR (*absolute address*,x)**|JSR ($0000,x)|Salta para um endereço absoluto localizado em $7E0000, que é indexado por `X`, então retorna.|
+
+Com estes opcodes, assim como uma tabela de ponteiros, é possível executar uma subotina dependendo do valor de um determinado endereço de RAM. Aqui está um exemplo que executa uma rotina dependendo do valor do endereço da RAM $7E0014:
 
 ```
-LDA $14            ; Load the value into A...
-ASL A              ; ...Multiply it by two...
-TAX                ; ...then transfer it into X
-JSR (Pointers,x)   ; Execute routines.
+LDA $14            ; Carrega o valor em A...
+ASL A              ; ...Multiplica-o por dois...
+TAX                ; ...e o transfere para X
+JSR (Pointers,x)   ; Executa rotinas.
 RTS
 
 Pointers: dw Label1 ; $7E0014 = $00
@@ -237,35 +244,35 @@ Label4:   LDA #$55
           STA $66
           RTS
 ```
-The short explanation is that depending on the value of RAM address $14, the four routines are executed. For value `$00`, the routine at `Label1` is executed. For value `$01`, the routine at `Label2` is executed, and so on.
+A explicação rápida é que dependendo do valor do endereço da RAM $14, as quatro rotinas são executadas. Para o valor `$00`, a rotina em` Label1` é executada. Para o valor `$01`, a rotina em` Label2` é executada e assim por diante.
 
-The long explanation is that we load the value into A and multiply it by two, because we use *words* for our pointer tables. Thus, we need to index every two bytes instead of every byte. This means that value `$00` stays as index value `$00` thus reading the `Label1` pointer. Value `$01` becomes index value `$02`, thus reading the `Label2` pointer. Value `$02` becomes index value `$04`, thus reading the `Label3` pointer. Value `$03` becomes index value `$06`, thus reading the `Label4` pointer. Because the JSR uses an "absolute, indirect" addressing mode, the labels are also absolute, thus they only run in the same bank as that JSR.
+A explicação detalhada é que carregamos um valor em A e o multiplicamos por dois, porque usamos *words* para nossas tabelas de ponteiros. Portanto, precisamos indexar a cada dois bytes em vez de cada byte. Isso significa que o valor `$00` permanece como valor de indexação ` $00`, portanto, lendo o ponteiro `Label1`. O valor `$01` torna-se o valor de indexação ` $02`, lendo assim o ponteiro `Label2`. O valor `$02` torna-se o valor de indexação ` $04`, lendo assim o ponteiro `Label3`. O valor `$03` torna-se o valor de índice` $06`, lendo assim o ponteiro `Label4`. Como o JSR usa um modo de endereçamento "absoluto, indireto", os labels também são absolutos, portanto, eles só são executados no mesmo banco que esse JSR.
 
-### Pointer tables for data
-The same concept can be applied for data (i.e. tables). Imagine you want to read level data, depending on the level number. A pointer table would be a perfect solution for that. Here's an example:
+### Tabelas de ponteiros para dados
+O mesmo conceito pode ser aplicado para dados (ou seja, tabelas). Imagine que você deseja ler os dados do nível, dependendo do número do nível. Uma tabela de ponteiros seria uma solução perfeita para isso. Aqui está um exemplo:
 
 ```
-  LDA $14            ; Load the level number into A...
-  ASL A              ; ...Multiply it by three...
+  LDA $14            ; Carrega o número do nível em A...
+  ASL A              ; ...Multiplica-o por três...
   CLC
   ADC $14
-  TAY                ; ...then transfer it into Y
+  TAY                ; ...e então o transfere para Y
   LDA Pointers,y
   STA $00
   LDA Pointers+1,y
   STA $01
-  LDA Pointers+2,y ; Store the pointed address into RAM
-  STA $01          ; To use as an indirect pointer
+  LDA Pointers+2,y ; Armazena o endereço apontado na RAM
+  STA $01          ; Para usar um ponteiro indireto
 
   REP #$10
   LDY #$0000
-- LDA [$00],Y      ; Read level data until you reach an end-of-data marker
+- LDA [$00],Y      ; Lê os dados o nível até que alcance o marcado de fim dos dados
   CMP #$FF
   BEQ Return
 
   INY
   BRA -
-  ; Do something with level data here
+  ; Faz alguma coisa com os dados do nível
   
 Return:
   SEP #$10
@@ -284,118 +291,120 @@ Level3:   db $D9,$B0,$A0,$21,$FF
 
 Level4:   db $C0,$92,$84,$81,$82,$99,$FF
 ```
-In the first section, we use the same concept of multiplying a value to access a pointer table. Except this time, we multiply by three, because the pointer tables contain values that are *long*. We use this value as an index to the pointer table, and store the pointer in RAM $7E0000 to $7E0002, in little endian. After that, in the second section, we use RAM $7E0000 as an indirect pointer and start looping through its values, using Y as an index again. We keep looping indefinitely, until we hit an "end-of-data" marker, in this case the value `$FF`. We use this method because levels could be variable in length. We also use 16-bit Y because level data *could* be bigger than 256 bytes in size. Finally, we finish the routine by setting Y back to 8-bit and then returning.
+Na primeira seção, usamos o mesmo conceito de multiplicação de um valor para acessar uma tabela de ponteiros. Exceto que desta vez, multiplicamos por três, porque as tabelas de ponteiros contêm valores que são *longos*. Usamos este valor como um indexador para a tabela de ponteiros e armazenamos o ponteiro na RAM de $7E0000 a $7E0002, em little-endian. Depois disso, na segunda seção, usamos RAM $7E0000 como um ponteiro indireto e começamos a percorrer seus valores, usando `Y` como índice novamente. Continuamos o loop indefinidamente, até atingirmos um marcador de "fim dos dados", neste caso o valor `$FF`. Usamos esse método porque os níveis podem variar em comprimento. Também usamos `Y` 16-bit porque os dados de nível *podem* ter mais de 256 bytes de tamanho. Finalmente, terminamos a rotina definindo `Y` de volta para 8-bit e, em seguida, retornando.
 
-This example also shows how to use 24-bit pointers rather than 16-bit pointers. The pointer table contains long values. We use this in combination with a "direct, indirect *long*" addressing mode (i.e. the square brackets).
+Este exemplo também mostra como usar ponteiros 24-bit em vez de ponteiros de 16-bit. A tabela de ponteiros contém valores longos. Usamos isso em combinação com um modo de endereçamento "direto, indireto *longo*" (ou seja, os colchetes).
 
-## Pseudo 16-bit math
-It is possible to perform 16-­bit `ADC` and `SBC` without actually switching to 16-­bit mode. This is actually quite useful in cases a 16-bit value is stored across two separate addresses as two 8-bit values. This is possible with the help of the carry flag as well as the behaviour of the opcodes `ADC` and `SBC`.
+## Pseudo matemática 16-bit
+É possível executar `ADC` e` SBC` 16-bit sem realmente alternar para o modo 16-bit. Na verdade, isso é bastante útil nos casos em que um valor 16-bit é armazenado em dois endereços separados como dois valores 8-bit. Isso é possível com a ajuda do flag carry, bem como o comportamento dos opcodes `ADC` e` SBC`.
 
-Pseudo 16-bit math also works with `INC` and `DEC`, although you'd have to use them on the addresses instead of the A, X and Y registers. By making clever usage of the negative flag, it's possible to perform pseudo 16-bit math with this opcode also.
+A pseudo matemática 16-bit também funciona com `INC` e` DEC`, embora você tenha que usá-los nos endereços ao invés dos registradores `A`, `X` e `Y`. Fazendo uso inteligente do flag negative, é possível realizar pseudo matemática 16-bit com estes opcodes também.
 
 ### ADC
-Here's an example of a pseudo 16-bit `ADC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `ADC`:
 
 ```
 LDA #$F0
-STA $00            ; Initialize address $7E0000 to value $F0 for this example
+STA $00            ; Inicializa o endereço $7E0000 como valor $F0
 LDA #$05
-STA $59            ; Initialize address $7E0059 to value $05 for this example
-                   ; These would make the 16-bit value $05F0
+STA $59            ; Inicializa o endereço $7E0059 como valor $05
+                   ; Isso geraria o valor 16-bit $05F0
 
-LDA $00            ; Load the value $F0 into A
-CLC                ; Clear Carry flag for addition. C = 0
+LDA $00            ; Carrega o valor $F0 em A
+CLC                ; Desabilita o flag carry para adição. C = 0
 ADC #$20           ; $F0+$20 = $10, C = 1
-STA $00            ; $7E0000 has now the value $10
+STA $00            ; $7E0000 agora tem o valor $10
 
-LDA $59            ; Load the value $05 into A
-ADC #$00           ; Add $00 to $7E0005. BUT because C = 1, this adds $01 to A instead
-STA $59            ; A is now $06, and we store it into $7E0059
-                   ; These would now make the 16-bit value $0610
-                   ; across two addresses
+LDA $59            ; Carrega o valor $05 em A
+ADC #$00           ; Adiciona $00 a $7E0005. MAS como C = 1, adiciona $01 em A
+STA $59            ; A agora é $06, e é armazenado em $7E0059
+                   ; Assim teríamos o valor 16-bit $0610
+                   ; perpassando dois endereços
 ```
-The carry flag is set after the first `ADC`. This means that the value has wrapped back to `$00` and increased from there. Because the carry flag is set, the second `ADC` adds $00 + carry, thus `$01`, thus increasing the second address by one.
+O flag carry é definido após o primeiro `ADC`. Isso significa que o valor voltou para `$00` e aumenta a partir daí. Como o flag carry está habilitado, o segundo `ADC` adiciona $00 + carry, portanto,` $01`, aumentando assim o segundo endereço em um.
+
+O flag carry é habilitado após o primeiro `ADC`. Isso significa que o valor voltou para `$00` e aumentou a partir daí. Como o flag carry está habilitado, o segundo `ADC` adiciona $00 + carry, portanto,` $01`, aumentando assim o segundo endereço em um.
 
 ### SBC
-Here's an example of a pseudo 16-bit `SBC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `SBC`:
 
 ```
 LDA #$10
-STA $00            ; Initialize address $7E0000 to value $10 for this example
+STA $00            ; Inicializa o endereço $7E0000 com o valor $10
 LDA #$05
-STA $59            ; Initialize address $7E0059 to value $05 for this example
-                   ; These would make the 16-bit value $0510
+STA $59            ; Inicializa o endereço $7E0059 como valor $05
+                   ; Isso geraria o valor 16-bit $05F0
 
-LDA $00            ; Load the value $10 into A
-SEC                ; Set Carry flag for subtraction. C = 1
+LDA $00            ; Carrega o valor $F0 em A
+SEC                ; Habilita o flag carry para subtração. C = 1
 SBC #$20           ; $10-$20 = $F0, C = 0
-STA $00            ; $7E0000 has now the value $10
+STA $00            ; $7E0000 agora tem o valor $10
 
-LDA $59            ; Load the value $05 into A
-ADC #$00           ; Subtract $00 from $7E0005. BUT because C = 0, this subtracts $01 from A instead
-STA $59            ; A is now $04, and we store it into $7E0059
-                   ; These would now make the 16-bit value $04F0
-                   ; across two addresses
+LDA $59            ; Carrega o valor $05 em A
+ADC #$00           ; Subtrai $00 de $7E0005. MAS como C = 0, subtrai $01 de A
+STA $59            ; A agora é $04, e é armazenado em $7E0059
+                   ; Assim teríamos o valor 16-bit $04F0
+                   ; perpassando dois endereços
 ```
-The carry flag is cleared after the first `SBC`. This means that the value has wrapped back to `$FF` and decreased from there. Because the carry flag is cleared, the second `SBC` subtracts $00 + carry, thus `$01`, thus decreasing the second address by one.
+O flag carry é desabilitado após o primeiro `SBC`. Isso significa que o valor voltou para `$FF` e diminuiu a partir daí. Como o flag carry está desabilitado, o segundo `SBC` subtrai $ 00 + carry, portanto` $01`, diminuindo assim o segundo endereço em um.
 
 ### INC
-Here's an example of a pseudo 16-bit `INC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `INC`:
 
 ```
    LDA #$FF
-   STA $00          ; Initialize address $7E0000 to value $FF for this example
+   STA $00          ; Inicializa o endereço $7E0000 com o valor $FF
    LDA #$03
-   STA $59          ; Initialize address $7E0059 to value $03 for this example
-                    ; These would make the 16-bit value $$03FF
+   STA $59          ; Inicializa o endereço $7E0059 com o valor $03
+                    ; Isso irá compor o valor 16-bit $$03FF
 
-   INC $00          ; The value in $7E0000 is increased by 1, making it have the value $00
-   BNE +            ; This sets the zero flag, thus the branch is not taken
-   INC $59          ; Thus, the value in $7E0059 is also increased by 1
-+  RTS              ; These would now make the 16-bit value $0400
-                    ; across two addresses
+   INC $00          ; O valor em $7E0000 é incrementado em 1, gerando o valor $00
+   BNE +            ; Isso habilita o flag zero, assim o desvio não é feito
+   INC $59          ; Aqui, o valor em $7E0059 também é incrementado em 1
++  RTS              ; Isso geraria o valor 16-bit $0400
+                    ; perpassando dois endereços
 ```
-By making clever usage of the zero flag, we know that the result of `INC $00` is actually the value `$00`, because that's the only time the zero flag is set. If the result is indeed the value `$00`, then the other address needs to be increased also.
+Fazendo uso inteligente do flag zero, sabemos que o resultado de `INC $00` é na verdade o valor` $00`, porque é a única vez que o flag zero é definido. Se o resultado for realmente o valor `$00`, então o outro endereço também precisa ser incrementado.
 
 ### DEC
-Here's an example of a pseudo 16-bit `DEC`:
+Abaixo um exemplo de um pseudo matemática 16-bit com `DEC`:
 
 ```
    LDA #$00
-   STA $00          ; Initialize address $7E0000 to value $00 for this example
+   STA $00          ; Inicializa o endereço $7E0000 com o valor $00
    LDA #$03
-   STA $59          ; Initialize address $7E0059 to value $03 for this example
-                    ; These would make the 16-bit value $$0300
+   STA $59          ; Inicializa o endereço $7E0059 com o valor $03
+                    ; Isso irá compor o valor 16-bit $$0300
 
-   DEC $00          ; Decrease the value in $7E0000 by 1
-   LDA $00          ; If it results in $FF, then we wrapped from the value $00 to $FF
-   CMP #$FF         ; Thus, we need to decrease the value in $7E0059 also
+   DEC $00          ; Decrementa o valor em $7E0000 em 1
+   LDA $00          ; Se resultar em $FF, então passamos do valor $00 para $FF
+   CMP #$FF         ; Então, precisamos decrementar o valor em $7E0059 também
    BNE +
    DEC $59
-+  RTS              ; These would now make the 16-bit value $02FF
-                    ; across two addresses
-As you can see, there's an extra check for the value $FF, because there's no shorthand way to check if the result of a `DEC` is exactly the value $FF. If the result indeed is the value `$FF`, then the other address needs to be decreased also.
++  RTS              ; Isso geraria o valor 16-bit $02FF
+                    ; perpassando 2 endereços
 ```
+Como você pode ver, há uma verificação extra para o valor $FF, porque não há uma forma abreviada de verificar se o resultado de um `DEC` é exatamente o valor $FF. Se o resultado realmente for o valor `$FF`, então o outro endereço também precisa ser decrementado.
 
-## ADC and SBC on X and Y
-Increasing and decreasing A by a certain amount is easy because of `ADC` and `SBC`. However, these kind of instructions do not exist for X and Y. If you want to increase or decrease X and Y by a small amount, you would have to use `INX`, `DEX`, `INY` and `DEY`. This quickly gets impractical if you have to increase or decrease X and Y by great numbers (5 or more) though. In order to do that, you can temporarily transfer X or Y to A, then perform an `ADC` or `SBC`, then transfer it back to X or Y. 
+## ADC e SBC em X e Y
+Incrementar e decrementar `A` em uma certa quantidade é fácil por causa de `ADC` e` SBC`. No entanto, este tipo de instrução não existe para `X` e `Y`. Se você quiser aumentar ou diminuir `X` e `Y` em uma pequena quantidade, você terá que usar `INX`,` DEX`, `INY` e` DEY`. Isso rapidamente se torna impraticável se você tiver que aumentar ou diminuir `X` e `Y` em grandes números (5 ou mais). Para fazer isso, você pode transferir temporariamente `X` ou `Y` para `A` e, em seguida, executar um `ADC` ou` SBC` e, em seguida, transferi-lo de volta para `X` ou `Y`.
 
-### Addition
-Here's an example using `ADC`:
+### Adição
+Abaixo um exemplo usando `ADC`:
 ```
-TXA                ; Transfer X to A. A = X
+TXA                ; Transfere X para A. A = X
 CLC                ; 
-ADC #$42           ; Add $42 to A
-TAX                ; Transfer A to X. X has now increased by $42
+ADC #$42           ; Adiciona $42 em A
+TAX                ; Transfere A para X. X foi incrementado em $42
 ```
-By temporarily transferring X to A and back, the `ADC` practically is used on the X register, instead.
+Ao transferir temporariamente `X` para `A` e vice-versa, o `ADC` é praticamente usado no registrador `X`.
 
-### Subtraction
-Here's an example using `SBC`:
+### Subtração
+Abaixo um exemplo usando `SBC`:
 ```
-TXA                ; Transfer X to A. A = X
+TXA                ; Transfere X para A. A = X
 SEC                ; 
-SBC #$42           ; Subtract $42 from A
-TAX                ; Transfer A to X. X has now decreased by $42
+SBC #$42           ; Subtrai $42 de A
+TAX                ; Transfere A to X. X foi decrementado em $42
 ```
-By temporarily transferring X to A and back, the `SBC` practically is used on the X register, instead.
+Ao transferir temporariamente `X` para `A` e vice-versa, o `SBC` é praticamente usado no registrador `X`.
