@@ -387,24 +387,24 @@ Abaixo um exemplo de um pseudo matemática 16-bit com `DEC`:
 Como você pode ver, há uma verificação extra para o valor $FF, porque não há uma forma abreviada de verificar se o resultado de um `DEC` é exatamente o valor $FF. Se o resultado realmente for o valor `$FF`, então o outro endereço também precisa ser decrementado.
 
 ## ADC e SBC em X e Y
-Increasing and decreasing A by a certain amount is easy because of `ADC` and `SBC`. However, these kind of instructions do not exist for X and Y. If you want to increase or decrease X and Y by a small amount, you would have to use `INX`, `DEX`, `INY` and `DEY`. This quickly gets impractical if you have to increase or decrease X and Y by great numbers (5 or more) though. In order to do that, you can temporarily transfer X or Y to A, then perform an `ADC` or `SBC`, then transfer it back to X or Y. 
+Incrementar e decrementar `A` em uma certa quantidade é fácil por causa de `ADC` e` SBC`. No entanto, este tipo de instrução não existe para `X` e `Y`. Se você quiser aumentar ou diminuir `X` e `Y` em uma pequena quantidade, você terá que usar `INX`,` DEX`, `INY` e` DEY`. Isso rapidamente se torna impraticável se você tiver que aumentar ou diminuir `X` e `Y` em grandes números (5 ou mais). Para fazer isso, você pode transferir temporariamente `X` ou `Y` para `A` e, em seguida, executar um `ADC` ou` SBC` e, em seguida, transferi-lo de volta para `X` ou `Y`.
 
 ### Adição
 Abaixo um exemplo usando `ADC`:
 ```
-TXA                ; Transfer X to A. A = X
+TXA                ; Transfere X para A. A = X
 CLC                ; 
-ADC #$42           ; Add $42 to A
-TAX                ; Transfer A to X. X has now increased by $42
+ADC #$42           ; Adiciona $42 em A
+TAX                ; Transfere A para X. X foi incrementado em $42
 ```
-By temporarily transferring X to A and back, the `ADC` practically is used on the X register, instead.
+Ao transferir temporariamente `X` para `A` e vice-versa, o `ADC` é praticamente usado no registrador `X`.
 
 ### Subtração
 Abaixo um exemplo usando `SBC`:
 ```
-TXA                ; Transfer X to A. A = X
+TXA                ; Transfere X para A. A = X
 SEC                ; 
-SBC #$42           ; Subtract $42 from A
-TAX                ; Transfer A to X. X has now decreased by $42
+SBC #$42           ; Subtrai $42 de A
+TAX                ; Transfere A to X. X foi decrementado em $42
 ```
-By temporarily transferring X to A and back, the `SBC` practically is used on the X register, instead.
+Ao transferir temporariamente `X` para `A` e vice-versa, o `SBC` é praticamente usado no registrador `X`.
