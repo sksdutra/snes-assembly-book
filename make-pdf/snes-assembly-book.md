@@ -322,7 +322,7 @@ Escrever em assembly envolve escrever um monte de instruções em que você carr
 
 A memória do SNES é basicamente uma região de *bytes*, e cada *byte* está localizado em um "endereço". Pense nisso como um tabuleiro de xadrez:
 
-![](/home/sandro/Documentos/snes-assembly-book/docs/.gitbook/assets/chessboard.png)
+![Tabuleiro de Xadrez](/home/sandro/Documentos/snes-assembly-book/make-pdf/.gitbook/assets/chessboard.png)
 
 Você pode ver que para se referir a uma determinada casa, a imagem faz uso de nomes de colunas e casas. Na imagem acima o "endereço" da rainha \(o "valor" \) seria o endereço D8, por exemplo. Além disso, uma única casa não pode conter duas unidades. Este mesmo conceito se aplica à memória do SNES.
 
@@ -342,7 +342,7 @@ Conforme estabelecido anteriormente, um endereço pode conter apenas um *byte*. 
 
 A figura a seguir temos uma visão geral da memória básica do SNES \(também conhecido como mapa de memória\):
 
-![The &#x201C;LoROM&#x201D; Memory Map](/home/sandro/Documentos/snes-assembly-book/docs/.gitbook/assets/memory.png)
+![O Mapa de Memória LoROM](/home/sandro/Documentos/snes-assembly-book/make-pdf/.gitbook/assets/memory.png)
 
 Este mapa de memória está no formato "LoROM". Se você é um hacker de SMW, não precisa se preocupar com o que isso significa; apenas considere este mapa de memória por garantia.
 
