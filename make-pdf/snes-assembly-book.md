@@ -15,7 +15,7 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 * [Hexadecimal](#Hexadecimal)
 * [Binário](#Binário)
 * [Memória](#A-Memória-do-SNES)
-* [Registradores](the-basics/registers.md)
+* [Registradores](#Os-Registradores-do-SNES)
 * [Modos de endereçamento](the-basics/endereçamento.md)
 * [Little-endian](the-basics/endian.md)
 * [Glossário](the-basics/glossary.md)
@@ -318,7 +318,7 @@ Você pode converter entre decimal, hexadecimal e binário, usando o modo de "pr
 
 # A Memória do SNES
 
-Escrever em assembly envolve escrever um monte de instruções em que você carrega um "valor" e o armazena em um "endereço" para obter o efeito desejado, como alterar o *powerup* do jogador por exemplo. Ao gravar dados em assembly, você trabalhará com a memória do SNES na maior parte do tempo.
+Trabalhar assembly envolve escrever um monte de instruções em que você carrega um "valor" e o armazena em um "endereço" para obter o efeito desejado, como alterar o *powerup* do jogador, por exemplo. Ao gravar dados em assembly, você trabalhará com a memória do SNES na maior parte do tempo.
 
 A memória do SNES é basicamente uma região de *bytes*, e cada *byte* está localizado em um "endereço". Pense nisso como um tabuleiro de xadrez:
 
@@ -329,8 +329,8 @@ Você pode ver que para se referir a uma determinada casa, a imagem faz uso de n
 A memória do SNES é mapeada do endereço $000000 a $FFFFFF, embora apenas os endereços de $00000 a $7FFFFF sejam usados na maioria dos casos. O formato de um endereço é o seguinte: $BBHHDD.
 
 * BB é o "byte do banco";
-* HH é o "High byte" ou Byte mais significativo;
-* DD é o "Low byte" ou Byte menos significativo.
+* HH é o "High byte" ou *Byte* mais significativo;
+* DD é o "Low byte" ou *Byte* menos significativo.
 
 Os endereços podem ser escritos de 3 maneiras: $BBHHDD, $HHDD e $DD, como $7E0003, $0003 e $03.
 
@@ -356,7 +356,7 @@ Este mapa de memória está no formato "LoROM". Se você é um hacker de SMW, n�
 
 A *RAM* do SNES tem o tamanho 128kB e está localizado nos endereços de $7E0000 a $7FFFFF. A *RAM* é totalmente genérica. Não existe uma regra como “o endereço $7E0120 é usado para as vidas do jogador em todos os jogos SNES.” Você mesmo define a finalidade da *RAM*, escrevendo seu próprio código *ASM*.
 
-O mapa de memória mostra que os bancos $00-3F contêm um "espelho" da *RAM*. Os endereços de *RAM* espelhados são endereços que contêm o mesmo valor em todos os bancos. Isso significa que o endereço de *RAM* $001234 contém exatamente o mesmo valor de $0F1234 em todos os momentos. Ter a *RAM* espelhada significa que o código em execução na ROM nesses bancos pode acessar a *RAM* de $7E0000 a $7E1FFF com mais "facilidade". Por outro lado, o código executado nos bancos $40-6F tem mais problemas para acessar a *RAM* porque a *RAM* não é espelhada nesse local.
+O mapa de memória mostra que os bancos $00-3F contêm um "espelho" da *RAM*. Os endereços de *RAM* espelhados são endereços que contêm o mesmo valor em todos os bancos. Isso significa que o endereço de *RAM* $001234 contém exatamente o mesmo valor de $0F1234 em todos os momentos. Ter a *RAM* espelhada significa que o código em execução na *ROM* nesses bancos pode acessar a *RAM* de $7E0000 a $7E1FFF com mais "facilidade". Por outro lado, o código executado nos bancos $40-6F tem mais problemas para acessar a *RAM* porque a *RAM* não é espelhada nesse local.
 
 Por razões de simplicidade, você **sempre** pode assumir que o banco $00 é igual ao banco $7E.
 
@@ -366,7 +366,7 @@ Por razões de simplicidade, você **sempre** pode assumir que o banco $00 é ig
 
 *SRAM* se comporta exatamente como *RAM*; você pode armazenar e carregar qualquer coisa nela, mas os valores não são apagados quando o SNES é reiniciado. A memória *SRAM* é mantida viva por uma bateria que está presente em um cartucho de SNES. Quando a bateria se esgota ou é removida, a *SRAM* não funcionará corretamente e possivelmente perderá os dados após cada reinicialização. Nos emuladores, a *SRAM* é armazenada nos arquivos ".srm".
 
-*SRAM* é geralmente usado para salvar arquivos, embora também possa ser usada como uma memória *RAM* extra.
+*SRAM* é geralmente usada para salvar arquivos, embora também possa ser usada como uma memória *RAM* extra.
 
 # Os Registradores do SNES
 
@@ -374,44 +374,40 @@ O SNES possui vários “registradores” que são usados para diferentes finali
 
 ## Acumulador (A)
 
-O acumulador, também conhecido como **A**, é usado para operações matemáticas em geral, deslocamento de bits, operações bit a bit e carregamento de valores indiretos. A também pode conter variáveis ​​de uso geral para armazenar valores na memória e em outros registradores. Este registrador pode conter um valor de 8 ou 16-bit
+O acumulador, também conhecido como **A**, é usado para operações matemáticas em geral, deslocamento de *bits*, operações *bit* a *bit* e carregamento de valores indiretos. `A` também pode conter variáveis ​​de uso geral para armazenar valores na memória e em outros registradores. Este registrador pode conter um valor de 8 ou 16 *bits*.
 
-O acumulador às vezes é referido como `B` ou `C` em alguns opcodes. B significa o high byte do acumulador, enquanto C significa o acumulador completo de 16-bit.
+O acumulador às vezes é referido como `B` ou `C` em alguns opcodes. `B` significa o *byte* mais significativo do acumulador, enquanto `C` significa o acumulador completo de 16 *bits*.
 
-{% hint style = "aviso"%}
-Na verdade, esse registrador pode ser sempre considerado como de 16-bit. Quando A está no modo de 8-bit, você acessa o low byte desse registrador. Quando A está no modo de 16-bit, você acessa o ambos high e low byte desse registrador ao mesmo tempo. O high byte não é apagado quando A entra no modo de 8-bit, mesmo quando novos valores são gravados em A, razão pela qual o high byte pode ser considerado "oculto". Além disso, certas instruções usam high e low bytes do registrador A, independentemente de A estar no modo de 8 ou 16-bit.
-{% endhint%}
+> Na verdade, esse registrador pode ser sempre considerado como de 16 *bits*. Quando `A` está no modo de 8 *bits*, você acessa o *byte* menos significativo desse registrador. Quando `A` está no modo de 16 *bits* você acessa ambos, o *byte* mais significativo e o menos significativo desse registrador ao mesmo tempo. O *byte* mais significativo não é apagado quando `A` entra no modo de 8 *bits*, mesmo quando novos valores são gravados em `A`, razão pela qual o *byte* mais significativo pode ser considerado "oculto". Além disso, certas instruções usam ambos os *bytes* do registrador `A`, independentemente de `A` estar no modo de 8 ou 16 *bits*.
 
 ## Indexadores (X,Y)
 
-Os indexadores são dois registradores, conhecidos como **X** e **Y**. Embora sejam registradores separados, eles têm exatamente as mesmas finalidades e se comportam exatamente da mesma forma. Esses registradores são feitos para indexação, explicada posteriormente neste tutorial. Esses registradores também podem ser de 8 ou 16-bit. X e Y também podem conter variáveis ​​de uso geral para armazenar valores na memória e em outros registradores.
+Os indexadores são dois registradores, conhecidos como **X** e **Y**. Embora sejam registradores separados, eles têm exatamente as mesmas finalidades e se comportam exatamente da mesma forma. Esses registradores são feitos para indexação, explicada posteriormente neste tutorial. Esses registradores também podem ser de 8 ou 16 *bits*. `X` e `Y` também podem conter variáveis ​​de uso geral para armazenar valores na memória e em outros registradores.
 
-X e Y são “interligados” - e só podem estar no modo de 8 ou 16-bit ao mesmo tempo. Um deles não pode ser de 8-bit e o outro de 16-bit.
+`X` e `Y` são “interligados” - e só podem estar no modo de 8 ou 16 *bits* ao mesmo tempo. Um deles não pode ser de 8 *bits* e o outro de 16 *bits*.
 
-{% hint style = "aviso"%}
-Quando X e Y saem do modo de 16-bit, seus high bytes são zerados para o valor $00, ao contrário do registrador A, onde o high byte permanece intacto.
-{% endhint%}
+Quando `X` e `Y` saem do modo de 16 *bits*, seus *bytes* mais significativos tornam-se o valor $00, ao contrário do registrador `A`, onde o *byte* mais significativo permanece intacto.
 
-## Direct page (D)
+## Página Direta (D)
 
-O registrador de Direct page é um registrador de 16-bit, usado no  modo de endereçamento de Direct page (explicado posteriormente neste tutorial). Quando você acessa um endereço da memória pela notação de Direct Page, o valor da Direct Page atual é adicionado nesse endereço. Geralmente, você pode ignorar esse registrador se estiver apenas iniciando em assembly.
+O registrador página direta é um registrador de 16 *bits*, usado no modo de endereçamento de página direta (explicado posteriormente neste tutorial). Quando você acessa um endereço da memória pela notação de página direta, o valor da página direta atual é adicionado nesse endereço. Geralmente, você pode ignorar esse registrador se estiver apenas iniciando em assembly.
 
-## Stack Pointer (SP)
+## Ponteiro da Pilha (SP)
 
-O stack pointer é um registrador de 16-bit que mantém o ponteiro do stack na RAM (explicado mais tarde neste tutorial), relativo ao endereço de memória $000000. O registrador muda dinamicamente, conforme você adiciona e requisita valores na stack (explicado posteriormente no tutorial).
+O ponteiro da pilha é um registrador de 16 *bits* que mantém o ponteiro do pilha na *RAM* (explicado mais tarde neste tutorial), relativo ao endereço de memória $000000. O registrador muda dinamicamente, conforme você adiciona e requisita valores na pilha (explicado posteriormente no tutorial).
 
-## Processor Status (P)
+## Estado do Processador (P)
 
-O registrador de status do processador contém os sinalizadores do processador atual no formato de 8-bit. Existem 8 sinalizadores de processador e todos ocupam um bit. Alterar esse registrador alteraria muito o comportamento do SNES. Os sinalizadores do processador são explicados posteriormente neste tutorial.
+O registrador de estado do processador contém os sinalizadores do processador no formato de 8 *bita*. Existem 8 sinalizadores de processador e todos ocupam um *bit*. Alterar esse registrador também modifica o comportamento do SNES. Os sinalizadores do processador são explicados posteriormente neste tutorial.
 
-## Data bank (DB)
+## Banco dos Dados (DB)
 
-O registrador de data bank  contém um único byte do endereço do data bank atual. Quando você acessa um endereço usando a notação de "endereço absoluto", o SNES usará esse registrador para determinar o banco do endereço.
+O registrador de banco dos dados contém um único *byte* que é o endereço do banco dos dados atual. Quando você acessa um endereço usando a notação de "endereço absoluto", o SNES usará esse registrador para determinar o banco do endereço.
 
-## Program bank (PB)
+## Banco do Programa (PB)
 
-Este registrador contém o primeiro byte do endereço instrução do bank atual que será executada no momento. Assim, se houver um código executado no endereço $018009, este registrador terá valor $01.
+O registrador do banco do programa mantém registro do banco atual da instrução executada. Assim, se houver um código executado no endereço $018009, este registrador terá valor $01.
 
-## Program counter (PC)
+## Contador do Programa (PC)
 
-Este registrador contém os high e low bytes do endereço da instrução que será executada no momento. Portanto, se houver uma instrução executada em $018009, este registrador terá o valor $8009.
+Este registrador contém os *bytes* mais significativo e menos significativo do endereço da instrução que será executada no momento. Portanto, se houver uma instrução executada em $018009, este registrador terá o valor $8009.
