@@ -16,8 +16,8 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 * [Binário](#Binário)
 * [Memória](#A-Memória-do-SNES)
 * [Registradores](#Os-Registradores-do-SNES)
-* [Modos de endereçamento](the-basics/endereçamento.md)
-* [Little-endian](the-basics/endian.md)
+* [Modos de endereçamento](#Modos-de-Endereçamento)
+* [Little-endian](#Little-endian)
 * [Glossário](the-basics/glossary.md)
 
 ## O Básico(novamente)
@@ -411,3 +411,45 @@ O registrador do banco do programa mantém registro do banco atual da instruçã
 ## Contador do Programa (PC)
 
 Este registrador contém os *bytes* mais significativo e menos significativo do endereço da instrução que será executada no momento. Portanto, se houver uma instrução executada em $018009, este registrador terá o valor $8009.
+
+# Modos de Endereçamento
+
+Existem diferentes modos de endereçamento no 65c816. Os modos de endereçamento são usados para fazer com que os opcodes acessem endereços e valores de maneira diferente, como "indexado" ou "direto indiretot" (explicado posteriormente neste tutorial). Usando-os com sabedoria, você pode acessar valores e endereços de memória de várias maneiras. Por exemplo, você pode carregar imediatamente um valor em um registrador, como `A`, ou carregar um byte da ROM em `A`. Lembre-se de que nem todos os opcodes suportam todos os modos de endereçamento. Aqui estão alguns dos modos de endereçamento importantes que você usará com frequência.
+
+## Imediato 8 ou 16 *bits*
+
+Este modo de endereçamento define um valor absoluto, que é escrito como #$XX no modo 8 *bits* ou #$XXXX no modo 16 *bits*. O # significa "valor imediato", enquanto o $ significa hexadecimal. Usar # sozinho torna a entrada decimal. Por exemplo, #10 é igual a #$0A. Pense em um valor imediato como um número que você está definindo diretamente.
+
+## Página Direta
+
+Este modo de endereçamento define um endereço página direta, que é escrito como $XX.
+
+A página direta são os últimos 2 dígitos hexadecimais de um endereço longo. Por exemplo, endereçar $7E0011 como página direta seria $11. Ao carregar de um endereço página direta, o byte do banco é SEMPRE tratado como $00, sem exceções. Se você escrever “LDA $11” por exemplo, você carregaria o conteúdo de $000011 no acumulador, que também é espelhado em $7E0011 (lembre-se da ilustração da memória SNES). Portanto, você carrega o conteúdo de $7E0011 em `A`.
+
+## Absoluto
+
+Este modo de endereçamento define um endereço absoluto, que é escrito como $XXXX.
+
+Um endereço absoluto são os últimos 4 dígitos hexadecimais de um endereço longo. Usando o exemplo anterior, o endereço $7E0011 como um endereço absoluto seria $0011. O byte do banco do endereço absoluto é determinado pelo registrador de banco dos dados.
+
+## Longo
+
+Este modo de endereçamento define um endereço longo, que é escrito como $XXXXXX.
+
+Endereços longos oferecem menos complicações ao lidar com bancos e espelhamento. Você também não precisa se preocupar com o que o registrador de banco dos dados contém atualmente. Com endereços longos, você pode acessar qualquer endereço na memória SNES.
+
+## Outros modos de endereçamento
+
+O SNES oferece suporte a mais modos de endereçamento. Os descritos acima são os básicos. Existem outros, tais como: versões indexadas de página direta, endereçamentos absolutos e longos e muito mais. Eles serão explicados no final deste tutorial porque você não precisa deles neste momento. Isso tornaria as coisas ainda mais confusas.
+
+# Little-endian
+
+Dentro da memória do SNES, os valores de 16 *bits* e 24 *bits* são sempre armazenados em "*little-endian*". Tome por exemplo o valor $1234 que armazenamos na RAM; $1234 não aparece como $12 $34. Ao invés disso, aparece como $34 $12. É assim que funciona o SNES. Quando esse número é lido no modo de 16 *bits*, ele mostra $1234, NÃO $3412. O SNES reverte isso automaticamente.
+
+Os valores de 24 *bits* não são exceção. Valores, como $123456, são armazenados na memória como $56 $34 $12.
+
+Você pode escrever tudo em *ASM* normal sem se preocupar com o *endianness*, pois tudo é tratado automaticamente pelo SNES e pelo assembler! Você deve se preocupar com *endianness* ao lidar com valores de 16 *bits* no modo de 8 *bits*.
+
+Por exemplo: se você armazenar o valor $1234 no endereço $7E0000, ele será armazenado como $34 $12. Então, se quiser acessar o *byte* inferior de $1234 (que é $34), você precisará ler $7E0000, NÃO $7E0001.
+
+O conceito de *little-endian* é especialmente importante ao lidar com "ponteiros", que é explicado mais tarde neste tutorial.
