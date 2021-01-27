@@ -16,14 +16,14 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 * [Binário](#Binário)
 * [Memória](#A-Memória-do-SNES)
 * [Registradores](#Os-Registradores-do-SNES)
-* [Modos de endereçamento](#Modos-de-Endereçamento)
+* [Modos de Endereçamento](#Modos-de-Endereçamento)
 * [Little-endian](#Little-endian)
-* [Glossário](the-basics/glossary.md)
+* [Glossário](#Glossário)
 
 ## O Básico(novamente)
 
-* [Carregando e armazenando](programming/loading-and-storing.md)
-* [Endereços mais curtos](programming/shorter-addresses.md)
+* [Carregando e Armazenando](#Carregando-e-Armazenando)
+* [Encurtando Endereços](#Encurtando-Endereços)
 * [Modo 8 e 16-bit](programming/816.md)
 * [Comparando, branches, labels](programming/branches.md)
 * [Salto para sub-rotinas](programming/subroutine.md)
@@ -453,3 +453,167 @@ Você pode escrever tudo em *ASM* normal sem se preocupar com o *endianness*, po
 Por exemplo: se você armazenar o valor $1234 no endereço $7E0000, ele será armazenado como $34 $12. Então, se quiser acessar o *byte* inferior de $1234 (que é $34), você precisará ler $7E0000, NÃO $7E0001.
 
 O conceito de *little-endian* é especialmente importante ao lidar com "ponteiros", que é explicado mais tarde neste tutorial.
+
+# Glossário
+
+Aqui estão algumas definições dos termos mais comuns usados neste tutorial. Por uma questão de contexto e continuidade, é melhor ler de cima para baixo.
+
+| Terminologia             | Definição                                                    |
+| ------------------------ | ------------------------------------------------------------ |
+| SNES                     | Super Nintendo Entertainment System                          |
+| Memória                  | O espaço de trabalho no SNES em que a ROM, RAM e SRAM estão presentes |
+| ROM                      | Read-only memory; Os arquivos .smc/.sfc/.fig/*.etc           |
+| (W)RAM                   | (Work) Random-access memory                                  |
+| SRAM                     | Static random-access memory; O arquivo .srm                  |
+| Registrador              | Uma variável no SNES que não faz parte da memória padrão do SNES |
+| Opcode                   | Uma instrução de três letras; Um comando                     |
+| Modo de Endereçamento    | Um parâmetro opcional para um opcode denotando um valor ou endereço |
+| Instrução/Operação       | A combinação de um opcode e opcionalmente um modo de endereçamento |
+| Bytecode                 | Uma instrução montada em bytes e inteligível para o processador; Código de máquina |
+| Valor                    | Uma magnitude, quantidade ou número; Um número representando informação |
+| Com sinal                | Um valor que semânticamente se permite ser negativo          |
+| Sem sinal                | Um valor que semânticamente se permite ser apenas positivo, possibilitando acesso a números positivos maiores. |
+| Endereço                 | Um local na memória do SNES. Vai de $000000 a $FFFFFF        |
+| Endereço longo           | Um endereço representado, em notação hexadecimal, por 6 dígitos, por exemplo: $001200 |
+| Endereço absoluto        | Um endereço representado, em notação hexadecimal, por 4 dígitos, por exemplo: $1200 |
+| Página direta            | Um endereço representado, em notação hexadecimal, por 2 dígitos, por exemplo: $00. |
+| Byte                     | Um valor com 8 *bits*                                        |
+| Word                     | Um valor com 16 *bits*                                       |
+| Long                     | Um valor com 24 *bits*                                       |
+| Double                   | Um valor com 32 *bits*                                       |
+| Byte do Banco            | Os primeiros dois dígitos em um endereço longo ou valor longo, por exemplo: '$12' em $123456) |
+| Byte mais significativo  | Os dígitos do meio em um endereço longo ou valor longo, por exemplo: '$34' em $123456) |
+| Byte menos significativo | Os últimos dois dígitos de um endereço longo ou valor longo, por exemplo: '$56' em $123456) |
+
+# O Básico(novamente)
+
+# Carregando e Armazenando
+
+A primeira coisa que você precisa saber ao iniciar em assembly é como carregar e armazenar os dados usando os registradores do SNES. Os opcodes básicos para carregar e armazenar dados são `LDA` e `STA`.
+
+Como mencionado anteriormente, há 3 registradores principais:
+
+* O acumulador **A**;
+* Os indexadores **X** e **Y**.
+
+Embora esses registradores possam estar no modo de 8 *bits* ou 16 *bits*, neste tutorial os consideraremos 8 *bits* por padrão.
+
+## LDA e STA
+
+| Opcode  | Nome completo          | Explicação                           |
+| ------- | ---------------------- | ------------------------------------ |
+| **LDA** | Load into accumulator  | Carrega um valor em A                |
+| **STA** | Store from accumulator | Armazena o valor de A em um endereço |
+
+Usaremos endereços da RAM para simplificar. Abaixo, temos um exemplo de como carregar e armazenar valores.
+
+```
+LDA #$03           ; A = $03
+STA $7E0001
+```
+
+Agora, veremos o que  esse código está fazendo linha por linha.
+
+```
+LDA #$03
+`````
+
+Essa instrução carrega o valor $03 em `A`. O `#` significa que estamos carregando um valor de fato e não um endereço. Após a execução da instrução, o conteúdo do registrador `A` torna-se $03. `LDA` pode carregar valores em `A`, no intervalo entre $00 a $FF no modo 8 *bits* entre $0000 a $FFFF no modo 16 *bits*.
+
+```
+STA $7E0001
+```
+
+A instrução acima armazena o valor de `A` no endereço $7E0001 da RAM. Como o valor de `A` é $03, o valor armazenado no endereço $7E0001 passa a ser $03 também. O conteúdo do registrador `A` **não** é apagado. Isso significa que você pode armazená-lo em vários endereços diferentes, dessa forma:
+
+```
+LDA #$03
+STA $7E0001
+STA $7E0053
+```
+
+Um erro comum de iniciante é escrever `STA #$7E0001` ou outra forma qualquer de "`STA #$`". Esta instrução não existe. Também não faz sentido; não há lógica em armazenar o valor de `A` em outro valor.
+
+> Lembre-se de que usar `$` em vez de `#$` após o opcode, significa que o parâmetro é um endereço e não um valor imediato.
+
+Colocar um ponto-e-vírgula (;) faz com que tudo após este sinal seja ignorado pelo *assembler*, durante a estapa de montagem do código. Em outras palavras: ` ;` é usado para comentários, por exemplo:
+
+```
+LDA #$03         ; Isto aqui é um comentário!
+```
+
+### Carregando e armazenando endereços
+
+Qual seria a utilidade de armazenar valores em um endereço da RAM se você não pudesse acessá-lo novamente? Você pode carregar o conteúdo de um endereço da RAM no registrador `A` usando `LDA` com um modo de endereçamento diferente. vejamos o exemplo a seguir:
+
+```
+LDA $7E0013
+STA $7E0042
+```
+
+E mais uma vez, linha por linha.
+
+```
+LDA $7E0013
+```
+
+Esta linha carregará o conteúdo do endereço $7E0013 da RAM em `A`. Suponhamos que o conteúdo seja $33. Então, `A` possuirá o valor $33. O conteúdo de $7E0013 permanecerá o mesmo, pois `LDA` copia o número ao invés de extraí-lo do endereço. Observe que desta vez usamos `$` em vez de `#$`, pois queríamos acessar um endereço da RAM. E por fim, tanto `A` quanto  $7E0013 possuem o valor $33.
+
+```
+STA $7E0042
+```
+
+Esta instrução armazenará o conteúdo do registrador `A` no endereço $7E0042 da RAM. A permanecerá inalterado. O endereço $7E0042 agora é $33. Em síntese: Este código está copiando o conteúdo de $7E0013 para $7E0042.
+
+## LDY, STY, LDX e STX
+
+Agora que aprendemos o básico sobre como carregar e armazenar valores em endereços, vamos introduzir os mesmos opcodes de carregamento, mas para os registradores de indexação:
+
+| Opcode  | Nome completo | Explicação                           |
+| ------- | ------------- | ------------------------------------ |
+| **LDY** | Load into Y   | Carrega um valor em Y                |
+| **STY** | Store from Y  | Armazena o valor de Y em um endereço |
+| **LDX** | Load into X   | Carrega um valor em X                |
+| **STX** | Store from X  | Armazena o valor de X em um endereço |
+
+Os opcodes acima se comportam da mesma forma que `LDA` e `STA`. A diferença é que eles usam os registradores `X` e `Y` em vez do acumulador. Por exemplo:
+
+```
+LDY #$03
+STY $0001
+```
+
+Este código irá armazenar o número $03 no endereço $7E0001 da RAM, utilizando o registrador `Y`. Para o registrador `X`, use `LDX` e `STX`. Quanto ao motivo pelo qual o endereço é $0001 em vez de $7E0001, consulte o capítulo:  [Encurtando Endereços](#Encurtando-Endereços)
+
+## STZ
+
+Existe um opcode que armazena o número $00 nos endereços.
+
+| Opcode  | Nome completo        | Explicação                           |
+| ------- | -------------------- | ------------------------------------ |
+| **STZ** | Store zero to memory | Define o valor de um endereço como 0 |
+
+Este opcode armazena o número $00 em um endereço. Ele nem precisa que os registradores `A`, `X` ou `Y` sejam previamente carregados com $00.
+
+Se você precisar de um código que armazene diretamente $00 em um endereço da RAM, você pode fazê-lo com apenas uma linha de código:
+
+```
+STZ $01          ; $7E0001 = $00. Nenhum registrador é afetado.
+```
+
+`STZ` armazenará zero em um endereço da RAM. Após esta instrução, o endereço $7E0001 conterá o número $00. Usar o `STZ` quando no modo de 16 *bits* armazenará $0000 em ambos os endereços $7E0001 e $7E0002 da RAM.
+
+# Encurtando Endereços
+
+É possível encurtar endereços, mas há pré-requisitos.
+
+Para encurtar um endereço longo da RAM em um endereço absoluto (4 dígitos), o endereço deve estar entre $7E0000 - $7E1FFF. $7E1234 pode ser reduzido para $1234, por exemplo. Se você encurtar o endereço $7E2000 ou superior em um endereço de 4 dígitos, você escreverá em outras áreas além da RAM. Isso tem a ver com o registrador data bank e com o mapa de memória do SNES.
+
+Se você quiser encurtar os endereços longos da RAM para um endereço página direta (2 dígitos), o *byte* mais significativo do endereço longo nunca devem exceder o valor $ 00FF. O endereço que você deseja armazenar deve ser no banco $00 ou $7E. Portanto, você pode encurtar `LDA $7E0001` para` LDA $01` e `STA $000001` para` STA $01`.
+
+Freqüentemente, é necessário escrever endereços mais curtos como parâmetros, pois certos opcodes não suportam certos modos de endereçamento. Por exemplo, o opcode `STZ` não suporta endereços longos, então você não pode escrever `STZ $7E1234`. Você terá que escrever `STZ $1234` em vez disso.
+
+Lembre-se de que quando você usa 2 dígitos para carregar e armazenar, o banco é sempre $00 por padrão, independentemente do registrador do banco dos dados! Você pode usar endereços de 2 dígitos para endereços de RAM $7E0000 - $7E00FF, porque a RAM $7E0000 - $7E1FFF é espelhado nos bancos $00 - $3F.
+
+
+
