@@ -24,8 +24,8 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 
 * [Carregando e Armazenando](#Carregando-e-Armazenando)
 * [Encurtando Endereços](#Encurtando-Endereços)
-* [Modo 8 e 16-bit](programming/816.md)
-* [Comparando, branches, labels](programming/branches.md)
+* [Modo 8 e 16 *bits*](#Modo-8-e-16-bits)
+* [Comparações, Desvios e Rótulos](programming/branches.md)
 * [Salto para sub-rotinas](programming/subroutine.md)
 
 ## Coleção de Valores
@@ -615,5 +615,236 @@ Freqüentemente, é necessário escrever endereços mais curtos como parâmetros
 
 Lembre-se de que quando você usa 2 dígitos para carregar e armazenar, o banco é sempre $00 por padrão, independentemente do registrador do banco dos dados! Você pode usar endereços de 2 dígitos para endereços de RAM $7E0000 - $7E00FF, porque a RAM $7E0000 - $7E1FFF é espelhado nos bancos $00 - $3F.
 
+# Modo 8 e 16 *bits*
+
+O SNES pode entrar nos modos de 8 *bits* ou 16 *bits*. Isso significa que os registradores `A`, `X` e `Y` podem carregar tanto valores de 16 *bits* quanto valores de 8 *bits*.
+
+Existem algumas maneiras de alternar entre os modos de 8 e 16 *bits*. A tabela a seguir demonstra todas as maneiras possíveis:
+
+| Código   | Explicação                                     |
+| -------- | ---------------------------------------------- |
+| REP #$10 | Define o modo de 16 *bits* para `X` e `Y`      |
+| REP #$20 | Define o modo de 16 *bits* para `A`            |
+| REP #$30 | Define o modo de 16 *bits* para `A`, `X` e `Y` |
+| SEP #$10 | Define o modo de 8 *bits* para `X` e `Y`       |
+| SEP #$20 | Define o modo de 8 *bits* para `A`             |
+| SEP #$30 | Define o modo de 8 *bits* para `A`, `X` e `Y`  |
 
 
+Os opcodes `REP` e `SEP` serão abordados posteriormente neste tutorial. Por enquanto, isso é tudo que você precisa saber.
+
+No modo 16 *bits* do acumulador, os seguintes recursos entram em vigor:
+
+* O acesso a memória, envolverá 2 endereços de RAM em vez de 1;
+* Esses dois endereços de RAM serão sempre adjacentes;
+* Os valores imediatos (#$) serão de 16 *bits*;
+* Os valores serão carregados e armazenados como *little-endian* na memória, mas você não precisa se preocupar com isso.
+
+Vamos começar com um exemplo imediatamente:
+
+```
+REP #$20
+LDA #$0001
+STA $7E0000
+SEP #$20
+```
+
+sendo que:
+
+```
+REP #$20
+```
+
+Aqui definimos o registrador `A` para o modo de 16 *bits*.
+
+```
+LDA #$0001
+```
+
+E aqui carregamos o valor de 16 *bits* $0001 em `A`, então `A` passa a possuir o valor $0001.
+
+> Se você escrever $01 em vez de $0001, o código provavelmente travará! Isso ocorre porque a CPU do SNES espera um parâmetro de 16 *bits*, e você está fornecendo um parâmetro de apenas 8 *bits*.  Portanto, parte do próximo opcode será lido como parte do parâmetro de 16 *bits* lido anteriormente, fazendo com que os opcodes seguintes se tornem inválidos.
+
+> Cada opcode (desconsiderando os parâmetros) torna-se um valor de 8 *bits* quando convertido em binário. É por isso que você só pode ver valores hexadecimais quando abre uma ROM em um editor hexadecimal. Para desmontar esses valores em código ASM, você precisará usar um “desmontador”.
+> 
+
+```
+STA $7E0000
+```
+
+Aqui armazenamos um valor 16 *bits* de `A` de no endereço $7E0000 e $7E0001 na RAM. Mas por que dois endereços? Porque um valor 16 *bits* não cabe em apenas um endereço. Lembre-se de que um endereço representa um valor de 8 *bits*, portanto, dois endereços representam um valor de 16 *bits*. $7E0000 e $7E0001 combinados agora terão o valor $0001.
+
+```
+SEP #$20
+```
+
+Aqui definimos o modo de 8 *bits* para `A`.
+
+Depois de executar as 4 instruções anteriores, ao darmos uma olhada na RAM, veremos algo assim:
+
+```
+$7E0000 | [01] [00] [XX] [XX] [XX] […]
+```
+
+O primeiro valor, $01, é o valor do endereço $7E0000. O segundo valor pertence a $7E0001. O terceiro valor a $7E0002, e assim por diante.
+
+Como você pode ver, o valor armazenado tornou-se *little-endian*, mas normalmente não precisamos nos preocupar com isso. Se tentarmos carregá-lo de volta em `A`, teremos que usar `LDA $7E0000`. Isso carregaria o valor $0001 em `A` novamente se `A` estiver no modo de 16 *bits*, é claro. Se você tentasse carregá-lo de volta quando `A` estiver no modo 8 *bits*, ele carregaria apenas o valor $01 em `A`.
+
+Também há o modo 16 *bits* para `X` e `Y`. E não está relacionado ao modo 16 *bits* de `A`. Se `A` estiver o modo 8 *bits* e `X`, `Y` no modo 16 *bits*, a seguinte situação é perfeitamente possível:
+
+```
+LDA #$13
+LDX #$4242
+```
+
+# Comparações, desvios e labels
+
+Você pode executar determinadas partes do código dependendo de certas condições. Para isso, você terá que fazer uso de instruções de comparação e desvio. As instruções de comparação, equiparam o conteúdo de A, X ou Y com um valor qualquer. Um opcode de desvio controla o fluxo do programa, dependendo (ou não) do resultado de uma comparação.
+
+## Branches
+
+Branches são instruções que controlam o fluxo do código que, dependendo do resultado das comparações, os Branches "desviam" para outros partes do código que são predeterminados por **labels**.
+
+As instruções de desvio são limitadas a um intervalo de -128 a 127 bytes. Isso significa que elas só podem saltar 128 bytes para trás ou 127 bytes para frente, em relação ao program counter. Uma exceção é o `BRL` (Branch Long). `BRL` possui um intervalo de 32768 bytes (8000 em hexadecimal), que é igual ao tamanho de  um banco inteiro. Se o branch sair do intervalo, o assembler acusará um erro. Você terá que encontrar uma maneira de colocar o label de destino ao alcance do branch. O capítulo "dicas e truques" explicará mais sobre isso.
+
+## Labels
+
+Os labels são rótulos de textos colocados no código para demarcar um ponto de entrada de um salto ou uma “tabela”. Os labels não são instruções nem nada parecido. É basicamente uma maneira mais fácil de especificar um endereço, pois labels são transformados em números pelo assembler. É uma boa prática dar nomes significativos aos labels, para seu próprio bem. Os códigos de exemplo neste capítulo farão uso de labels.
+
+## CMP
+
+Para fazer comparações, você geralmente usa o conteúdo de `A` e um outro valor qualquer. A principal forma de fazer isso é com o instrução `CMP`.
+
+| Opcode  | Nome completo | Explicação                 |
+| ------- | ------------- | -------------------------- |
+| **CMP** | Compare A     | Compara A com outro valor. |
+
+`CMP` pega o valor que está carregado em A e compara com um parâmetro especifico. Depois de usar uma instrução `CMP`, você precisará usar uma instrução que realizará o “tipo de desvio” que você deseja que ocorra.
+
+Também é possível comparar valores de 16-bit. Basta alterar `CMP #$xx` para `CMP #$xxxx`.
+
+## BEQ e BNE
+
+Existem instruções de desvio que saltam dependendo se a comparação dos valores forem iguais ou diferentes.
+
+| Opcode  | Nome completo        | Explicação                                      |
+| ------- | -------------------- | ----------------------------------------------- |
+| **BEQ** | Branch if equals     | Salta se o valores comparados forem iguais.     |
+| **BNE** | Branch if not equals | Salta se o valores comparados forem diferentes. |
+
+`BEQ` salta se os valores forem iguais. Veja o exemplo abaixo:
+
+```
+LDA $00            ; Carrega o valor atual do endereço da RAM $7E0000 em A
+CMP #$02           ; Compara A com o valor imediato $02
+BEQ Label1         ; Se A = $02, vá para Label1. NOTA: Diferencia maiúsculas e minúsculas
+LDA #$01           ; \ Senão
+STA $1245          ; / Armazena o valor $01 no endereço $7E1245.
+RTS                ; Esta instrução é usada para encerrar uma rotina.
+
+Label1:
+STZ $19            ; Armazene zero em $7E0019
+RTS                ; Fim.
+```
+
+Este código armazenará zero ($00) em $7E0019 quando $7E0000 possuir  o valor $02, caso contrário o código armazenará o valor $01 em $7E1245. Como você pode ver, `BEQ` irá "saltar" para uma parte do código quando os valores comparados forem iguais, pulando um determinado código. Neste caso, o código salta para o código localizado na label “Label1”
+
+`BNE` salta se os valores forem diferentes. Segue mais um exemplo:
+
+```
+LDA $00           ; Carrega o valor atual do endereço da RAM $7E0000 em A
+CMP #$02          ; Compara A com $02
+BNE Label1        ; A NÃO = $02, não faça nada e finalize o código.
+LDA #$01          ; \ Senão
+STA $1245         ; / Armazene algo no endereço da RAM $7E1245
+Label1:           ;
+RTS               ; Fim.
+```
+
+O código acima armazenará $01 em $7E1245, se $7E0000 possuir o valor $02. Senão, o código não fará nada e simplesmente finalizará.
+
+## Comparando endereços
+
+Você também pode comparar a partir de endereços da RAM. Por exemplo:
+
+```
+LDA $00           ; Carregue o valor de $7E0000 em A
+CMP $02           ; Compare A com $7E0002
+BEQ Equal         ; Vá para "Equal" se igual
+```
+
+Quando os endereços $7E0000 e $7E0002 tiverem os mesmos valores, o salto ocorrerá.
+
+## CPX e CPY
+
+Você também pode comparar usando os registradores `X` e `Y`.
+
+| Opcode  | Nome completo | Explicação                 |
+| ------- | ------------- | -------------------------- |
+| **CPX** | Compare X     | Compara X com outro valor. |
+| **CPY** | Compare Y     | Compara Y com outro valor. |
+
+Não é somente `A` que pode ser comparado. Por exemplo, você pode carregar um valor em `X` ou `Y` e compará-lo com outro valor. Aqui temos um exemplo de uso do `X`:
+
+```
+LDX $00           ; Carregue o valor de $7E0000 em X
+CPX $02           ; Compare X com $7E0002
+BEQ Equal         ; Vá para "Equal" se igual
+```
+
+Teremos o mesmo resultado do exemplo com a comparação de endereços. Você também pode comparar `Y` usando `CPY`. No entanto, você não pode misturar registradores. O código a seguir está errado:
+
+```
+LDX $00
+CMP $02
+BEQ Equal
+```
+
+`CMP $02` tentaria comparar o endereço $7E0002 com o registrador `A` em vez de `X`, causando resultados inesperados.
+
+## BMI e BPL
+
+Estas são instruções de desvio que saltam dependendo se um valor é com sinal  ou sem sinal.
+
+| Opcode  | Nome completo   | Explicação                                                |
+| ------- | --------------- | --------------------------------------------------------- |
+| **BMI** | Branch if minus | Salta se a última operação resultou em um valor negativo. |
+| **BPL** | Branch if plus  | Salta se a última operação resultou em um valor positivo. |
+
+`BMI` salta se a última operação resultar em um valor negativo. Os valores negativos são os valores de $80 a $FF. `BPL` salta se a última operação resultar em um valor positivo, ou seja, de $00 a $7F.
+
+## BCS e BCC
+
+Estes são instruções de desvio, dependendo se um valor é maior ou menor que.
+
+| Opcode  | Nome completo         | Explicação                                                   |
+| ------- | --------------------- | ------------------------------------------------------------ |
+| **BCS** | Branch if carry set   | Salta se o valor carregado for maior ou igual ao valor comparado. |
+| **BCC** | Branch if carry clear | Salta se o valor carregado for menor que o valor comparado.  |
+
+`BCS` salta se o valor carregado for igual ou maior que o valor comparado. Como alternativa, também salta quando a flag de carry estiver ativada.
+
+`BCC` salta se o valor carregado for menor que o valor comparado. Como alternativa, também salta quando o a flag de carry não estiver ativada. Observe que ao contrário do `BCS`, `BCC` não salta se os valores comparados forem iguais.
+
+## BVS e BVC
+
+Esses são instruções de desvio, dependendo se um valor resulta em um overflow matemático ou não.
+
+| Opcode  | Nome completo            | Explicação                                               |
+| ------- | ------------------------ | -------------------------------------------------------- |
+| **BVS** | Branch if overflow set   | Salta se a comparação causar um overflow matemático.     |
+| **BVC** | Branch if overflow clear | Salta se a comparação não causar um overflow matemático. |
+
+As flags de  “overflow” e "carry" são flags do processador, serão abordadas posteriormente no tutorial.
+
+## BRA e BRL
+
+Estas são instruções de desvios incondicionais que sempre serão executados.
+
+| Opcode  | Nome completo      | Explicação                                     |
+| ------- | ------------------ | ---------------------------------------------- |
+| **BRA** | Branch always      | Sempre efetua um desvio                        |
+| **BRL** | Branch always long | Sempre efetua um desvio, mas com maior alcance |
+
+`BRA` **sempre** saltará; ele nem mesmo valida as comparações.
+O `BRL` faz o mesmo, mas com um maior alcance, o suficiente para cobrir metade de um banco para cada direção.
