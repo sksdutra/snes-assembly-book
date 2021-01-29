@@ -697,40 +697,40 @@ LDA #$13
 LDX #$4242
 ```
 
-# Comparações, desvios e labels
+# Comparações, Desvios e Rótulos
 
-Você pode executar determinadas partes do código dependendo de certas condições. Para isso, você terá que fazer uso de instruções de comparação e desvio. As instruções de comparação, equiparam o conteúdo de A, X ou Y com um valor qualquer. Um opcode de desvio controla o fluxo do programa, dependendo (ou não) do resultado de uma comparação.
+Você pode executar determinadas partes do código dependendo de certas condições. Para isso, você terá que fazer uso de instruções de comparação e desvio. As instruções de comparação, equiparam o conteúdo de `A`, `X` ou `Y` com um valor qualquer. Um opcode de desvio controla o fluxo do programa, dependendo (ou não) do resultado de uma comparação.
 
-## Branches
+## Desvios
 
-Branches são instruções que controlam o fluxo do código que, dependendo do resultado das comparações, os Branches "desviam" para outros partes do código que são predeterminados por **labels**.
+Desvios são instruções que controlam o fluxo do código que, dependendo do resultado das comparações, "desviam" para outros partes do código que são predeterminados por **rótulos**.
 
-As instruções de desvio são limitadas a um intervalo de -128 a 127 bytes. Isso significa que elas só podem saltar 128 bytes para trás ou 127 bytes para frente, em relação ao program counter. Uma exceção é o `BRL` (Branch Long). `BRL` possui um intervalo de 32768 bytes (8000 em hexadecimal), que é igual ao tamanho de  um banco inteiro. Se o branch sair do intervalo, o assembler acusará um erro. Você terá que encontrar uma maneira de colocar o label de destino ao alcance do branch. O capítulo "dicas e truques" explicará mais sobre isso.
+As instruções de desvio são limitadas a um intervalo de -128 a 127 bytes. Isso significa que elas só podem saltar 128 bytes para trás ou 127 bytes para frente, em relação ao contador do programa. Uma exceção é o `BRL` (*Branch Long*). `BRL` possui um intervalo de 32768 bytes (8000 em hexadecimal), que é igual ao tamanho de  um banco inteiro. Se o desvio sair do intervalo, o *assembler* acusará um erro. Você terá que encontrar uma maneira de colocar o rótulo de destino ao alcance do desvio. O capítulo "dicas e truques" explicará mais sobre isso.
 
-## Labels
+## Rótulos
 
-Os labels são rótulos de textos colocados no código para demarcar um ponto de entrada de um salto ou uma “tabela”. Os labels não são instruções nem nada parecido. É basicamente uma maneira mais fácil de especificar um endereço, pois labels são transformados em números pelo assembler. É uma boa prática dar nomes significativos aos labels, para seu próprio bem. Os códigos de exemplo neste capítulo farão uso de labels.
+São rótulos de textos colocados no código para demarcar um ponto de entrada de um salto ou uma “tabela”. Os rótulos não são instruções nem nada parecido. É basicamente uma maneira mais fácil de especificar um endereço, pois rótulos são transformados em números pelo *assembler*. É uma boa prática dar nomes significativos aos rótulos, para seu próprio bem. Os códigos de exemplo neste capítulo farão uso de rótulos.
 
 ## CMP
 
 Para fazer comparações, você geralmente usa o conteúdo de `A` e um outro valor qualquer. A principal forma de fazer isso é com o instrução `CMP`.
 
-| Opcode  | Nome completo | Explicação                 |
-| ------- | ------------- | -------------------------- |
-| **CMP** | Compare A     | Compara A com outro valor. |
+| Opcode  | Nome completo | Explicação                  |
+| ------- | ------------- | --------------------------- |
+| **CMP** | Compare A     | Compara `A` com outro valor |
 
-`CMP` pega o valor que está carregado em A e compara com um parâmetro especifico. Depois de usar uma instrução `CMP`, você precisará usar uma instrução que realizará o “tipo de desvio” que você deseja que ocorra.
+`CMP` pega o valor que está carregado em `A` e compara com um parâmetro especifico. Depois de usar uma instrução `CMP`, você precisará usar uma instrução que realizará o “tipo de desvio” que você deseja que ocorra.
 
-Também é possível comparar valores de 16-bit. Basta alterar `CMP #$xx` para `CMP #$xxxx`.
+Também é possível comparar valores de 16 *bits*. Basta alterar `CMP #$xx` para `CMP #$xxxx`.
 
 ## BEQ e BNE
 
 Existem instruções de desvio que saltam dependendo se a comparação dos valores forem iguais ou diferentes.
 
-| Opcode  | Nome completo        | Explicação                                      |
-| ------- | -------------------- | ----------------------------------------------- |
-| **BEQ** | Branch if equals     | Salta se o valores comparados forem iguais.     |
-| **BNE** | Branch if not equals | Salta se o valores comparados forem diferentes. |
+| Opcode  | Nome completo        | Explicação                                     |
+| ------- | -------------------- | ---------------------------------------------- |
+| **BEQ** | Branch if equals     | Salta se o valores comparados forem iguais     |
+| **BNE** | Branch if not equals | Salta se o valores comparados forem diferentes |
 
 `BEQ` salta se os valores forem iguais. Veja o exemplo abaixo:
 
@@ -779,10 +779,10 @@ Quando os endereços $7E0000 e $7E0002 tiverem os mesmos valores, o salto ocorre
 
 Você também pode comparar usando os registradores `X` e `Y`.
 
-| Opcode  | Nome completo | Explicação                 |
-| ------- | ------------- | -------------------------- |
-| **CPX** | Compare X     | Compara X com outro valor. |
-| **CPY** | Compare Y     | Compara Y com outro valor. |
+| Opcode  | Nome completo | Explicação                |
+| ------- | ------------- | ------------------------- |
+| **CPX** | Compare X     | Compara X com outro valor |
+| **CPY** | Compare Y     | Compara Y com outro valor |
 
 Não é somente `A` que pode ser comparado. Por exemplo, você pode carregar um valor em `X` ou `Y` e compará-lo com outro valor. Aqui temos um exemplo de uso do `X`:
 
@@ -792,7 +792,7 @@ CPX $02           ; Compare X com $7E0002
 BEQ Equal         ; Vá para "Equal" se igual
 ```
 
-Teremos o mesmo resultado do exemplo com a comparação de endereços. Você também pode comparar `Y` usando `CPY`. No entanto, você não pode misturar registradores. O código a seguir está errado:
+Teremos o mesmo resultado do exemplo anterior  com a comparação de endereços. Você também pode comparar `Y` usando `CPY`. No entanto, você não pode misturar registradores. O código a seguir está errado:
 
 ```
 LDX $00
@@ -806,10 +806,10 @@ BEQ Equal
 
 Estas são instruções de desvio que saltam dependendo se um valor é com sinal  ou sem sinal.
 
-| Opcode  | Nome completo   | Explicação                                                |
-| ------- | --------------- | --------------------------------------------------------- |
-| **BMI** | Branch if minus | Salta se a última operação resultou em um valor negativo. |
-| **BPL** | Branch if plus  | Salta se a última operação resultou em um valor positivo. |
+| Opcode  | Nome completo   | Explicação                                               |
+| ------- | --------------- | -------------------------------------------------------- |
+| **BMI** | Branch if minus | Salta se a última operação resultou em um valor negativo |
+| **BPL** | Branch if plus  | Salta se a última operação resultou em um valor positivo |
 
 `BMI` salta se a última operação resultar em um valor negativo. Os valores negativos são os valores de $80 a $FF. `BPL` salta se a última operação resultar em um valor positivo, ou seja, de $00 a $7F.
 
@@ -822,20 +822,20 @@ Estes são instruções de desvio, dependendo se um valor é maior ou menor que.
 | **BCS** | Branch if carry set   | Salta se o valor carregado for maior ou igual ao valor comparado. |
 | **BCC** | Branch if carry clear | Salta se o valor carregado for menor que o valor comparado.  |
 
-`BCS` salta se o valor carregado for igual ou maior que o valor comparado. Como alternativa, também salta quando a flag de carry estiver ativada.
+`BCS` salta se o valor carregado for igual ou maior que o valor comparado. Como alternativa, também salta quando o sinalizador de carga estiver ativado.
 
-`BCC` salta se o valor carregado for menor que o valor comparado. Como alternativa, também salta quando o a flag de carry não estiver ativada. Observe que ao contrário do `BCS`, `BCC` não salta se os valores comparados forem iguais.
+`BCC` salta se o valor carregado for menor que o valor comparado. Como alternativa, também salta quando o sinalizador de carga não estiver ativado. Observe que ao contrário do `BCS`, `BCC` não salta se os valores comparados forem iguais.
 
 ## BVS e BVC
 
-Esses são instruções de desvio, dependendo se um valor resulta em um overflow matemático ou não.
+Esses são instruções de desvio que efetuam um salto caso um valor resulte em um *overflow* matemático ou não.
 
-| Opcode  | Nome completo            | Explicação                                               |
-| ------- | ------------------------ | -------------------------------------------------------- |
-| **BVS** | Branch if overflow set   | Salta se a comparação causar um overflow matemático.     |
-| **BVC** | Branch if overflow clear | Salta se a comparação não causar um overflow matemático. |
+| Opcode  | Nome completo            | Explicação                                              |
+| ------- | ------------------------ | ------------------------------------------------------- |
+| **BVS** | Branch if overflow set   | Salta se a comparação causar um overflow matemático     |
+| **BVC** | Branch if overflow clear | Salta se a comparação não causar um overflow matemático |
 
-As flags de  “overflow” e "carry" são flags do processador, serão abordadas posteriormente no tutorial.
+Os sinalizadores de  “overflow” e "carga" são sinalizadores do processador, serão abordadas posteriormente no tutorial.
 
 ## BRA e BRL
 
