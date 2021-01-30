@@ -25,7 +25,7 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 * [Carregando e Armazenando](#Carregando-e-Armazenando)
 * [Encurtando Endereços](#Encurtando-Endereços)
 * [Modo 8 e 16 *bits*](#Modo-8-e-16-bits)
-* [Comparações, Desvios e Rótulos](#Comparações,-Desvios-e-Rótulos)
+* [Comparações, Desvios e Rótulos](#Comparações-Desvios-e-Rótulos)
 * [Saltando para Sub-rotinas](#Saltando-para-Sub-rotinas)
 
 ## Coleção de Valores
