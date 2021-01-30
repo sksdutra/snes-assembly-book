@@ -28,11 +28,11 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 * [Comparações, Desvios e Rótulos](#Comparações-Desvios-e-Rótulos)
 * [Saltando para Sub-rotinas](#Saltando-para-Sub-rotinas)
 
-## Coleção de Valores
+## Coleções de Valores
 
-* [Tabelas e indexação](coleções/indexação.md)
-* [A pilha](coleções/pilha.md)
-* [Copiando dados](coleções/movimentos.md)
+* [Tabelas e Indexação](#Tabelas-e-Indexação)
+* [A Pilha](#A-Pilha)
+* [Copiando Dados](#Copiando-Dados)
 
 ## Flags e Registradores do Processador
 
@@ -944,3 +944,361 @@ RTS                ; Não retorna para "Label1". Retornará para o RTS acima.
 O registrador de banco dos dados não é atualizado quando você usa `JSL` ou `JML`. Você deverá fazer isso manualmente.
 
 Lembre-se que o `JSL`/`JML` podem saltar sem restrições para qualquer lugar? Isso quer dizer que eles podem saltar até mesmo para a RAM, isso quer dizer que você pode executar código na RAM. Você pode escrever valores na RAM que pode ser interpretados como código e, assim, executados.
+
+# Coleções de Valores
+
+# Tabelas e Indexação
+
+Indexar é a ação de acessar uma *tabela de dados* a partir de um certo *offset*, sendo tal *offset* definido por um indexador. Os registradores `X` e `Y` são indispensáveis quando se trata de indexação. Não obstante, são chamados registradores 'indexadores'.
+
+## Tabelas
+
+'Tabelas' são simplesmente uma sequência de valores. Elas são usadas em pelo menos dois cenários:
+
+* Casos condicionais (ex.: uma coleção de valores de aceleração, dependendo da direção da entidade)
+* Valores que representam um 'recurso' (ex.: dados gráficos, dados de música, dados de fase)
+
+Tabelas têm aplicações muito práticas em jogos de SNES. Você consegue, por exemplo, armazenar dados de texto em tabelas. Ou dados de fase. Ou ainda dados da paleta. Tabelas podem conter qualquer coisa e ter qualquer tamanho, desde que caibam na ROM.
+
+Existem quatro tipos de valores que você pode usar para escrever tabelas:
+
+| Instrução | Nome completo | Explicação                                                   |
+| --------- | ------------- | ------------------------------------------------------------ |
+| **db**    | direct byte   | Um valor que indica um *byte* (valor com 8 *bits*, por exemplo: $XX) |
+| **dw**    | direct word   | Um valor que indica um *word* (valor com 16 *bits*, por exemplo: $XXXX) |
+| **dl**    | direct long   | Um valor que indica um *long* (valor com 24 *bits*, por exemplo: $XXXXXX) |
+| **dd**    | direct double | Um valor que indica um *double* (valor com 32 *bits*, por exemplo: $XXXXXXXX) |
+
+Neste caso, os bytes são um “byte”, não “word” ou “long”, então “db”: *direct byte*. A tabela neste exemplo serve apenas para demonstrar a indexação. Neste caso, a tabela está localizada em algum lugar dentro da ROM. Tabelas são precedidas por um rótulo para que você possa consultá-las facilmente em seu código.
+
+Aqui está um exemplo de definição de tabela:
+
+```
+ValuesTableExample: db $03,$86,$91,$38,$22
+```
+
+Como você pode ver, primeiro definimos o tipo de valor como 'byte' escrevendo 'db'. E então, seguimos com os valores de byte separados por uma vírgula (,).
+
+Para acessar uma tabela, sempre usamos um rótulo. Nesse caso usamos o rótulo 'ValuesTableExample'.
+
+## Indexação
+
+Tabelas podem ser acessadas usando um rótulo. Rótulos são traduzidos em endereços de memória ROM. Expandindo o exemplo acima, o código a seguir leria um valor da tabel:
+
+```
+LDA ValuesTableExample
+STA $00
+RTS
+
+ValuesTableExample: db $03,$86,$91,$38,$22
+```
+
+Entretanto, o que esse código faz é ler sempre o primeiro valor da tabela, o valor $03, e armazená-lo em  $7E0000 da RAM. Isso acontece porque não usamos nenhum indexador.
+
+```
+LDY #$03           ; Y agora está carregado com o número $03
+LDA ValuesTableExample, y ;Carrega um número da tabela em A, usando Y como índice
+STA $00
+RTS
+
+ValuesTableExample: db $03,$86,$91,$38,$22
+```
+
+O código carregará um valor da tabela em `A`. Basicamente, isso faz `LDA ValuesTableExample`, e o valor em `Y`, que é $03, serem adicionados ao endereço. Em outras palavras, em linguagens de programação de alto nível seria algo como `ValuesTableExample[3]`. Você começa a contar o índice do **zero**. O índice 0 dessa tabela tem o valor $03, o índice 1 tem o valor $86, e assim por diante. O valor do índice 3 é $38 neste caso, então este código de exemplo realmente carrega $38 em `A` e o armazena em $7E0000 na RAM.
+
+A indexação é bastante útil quando você deseja escrever instruções muito repetitivas o tempo todo. A indexação também pode ser realizada com o registro `X`. Afinal, `X` e `Y` se comportam exatamente da mesma forma.
+
+A indexação é, na verdade, um dos muitos modos de endereçamento. Os modos básicos de endereçamento estão cobertos [aqui](#Modos-de-Endereçamento) e os modos mais avançados [aqui](https://github.com/Ersanio/snes-assembly-book/blob/master/docs/indepth/addressing.md). (Revisar Segundo Link)
+
+## Indexando com RAM
+
+Até agora, os exemplos acima eram sobre ROM. Também é possível indexar valores na RAM. Você consegue tratar a RAM como uma tabela gigante que permite indexação. Simplesmente substituindo a etiqueta carregada por um endereço. Por exemplo:
+
+```
+LDX #$03
+LDA $7E1000, x
+STA $00
+```
+
+Neste caso, o `LDA` resolveria no endereço `$7E1003`. O código carrega o valor de `$7E1003` em `A` e o armazena em `$7E1000`.
+
+# A Pilha
+
+A pilha é um tipo especial de 'tabela' localizada dentro da RAM do SNES. Imagine a pilha como uma pilha de pratos. Você só pode adicionar (push) ou remover (pull/pop) um prato pela parte superior. Você pode visualizar tal pilha como algo assim:
+
+```
+|   |
+|[ ]|
+|[ ]|
+|[ ]|
+|[ ]|
+‾‾‾‾‾
+```
+
+As 'caixas' vazias no exemplo acima são basicamente os valores dentro da pilha e podem conter qualquer valor. A coleção de caixas está fechada por todos os lados, exceto pela parte de cima.
+
+> Tecnicamente falando, como a pilha é uma área dentro da RAM, você pode acessar qualquer valor que desejar usando modos especiais de endereçamento relativo à pilha em vez de usar apenas os opcodes 'push' e 'pull'. Para os propósitos deste capítulo, iremos assumir que a pilha na verdade é uma pilha perfeita de pratos. 
+
+
+## Push
+
+'Pushing' é a ação de adicionar (colocar) um valor no topo da pilha. Segue um exemplo:
+
+```
+ [$32]
+  | push
+  v
+|     |   |[$32]|
+|[$B0]|   |[$B0]|
+|[$A9]| > |[$A9]|
+|[$82]|   |[$B2]|
+|[$14]|   |[$14]|
+‾‾‾‾‾‾‾   ‾‾‾‾‾‾‾
+```
+
+Como pode ver, o valor $32 é adicionado no topo da pilha. A pilha agora tem cinco valores em vez de quatro.
+
+## Pull/Pop
+
+'Pulling' (ou 'popping') é a ação de ler (recuperar) um valor do topo da pilha. Aqui está um exemplo:
+
+```
+           [$32]
+   ^ pull
+   |
+|[$32]|   |     |
+|[$B0]|   |[$B0]|
+|[$A9]| > |[$A9]|
+|[$82]|   |[$B2]|
+|[$14]|   |[$14]|
+‾‾‾‾‾‾‾   ‾‾‾‾‾‾‾
+```
+
+Como pode ver, o valor $32 é recuperado do topo da pilha.
+
+> *Todas* as instruções de 'pulling' afetam as flags Negativo e Zero do processador.
+
+## Push (colocar/adicionar) A, X, Y
+
+Existem opcodes para adicionar o valor atual contido nos registradores `A`, `X` ou `Y` na pilha:
+
+| Opcode  | Nome completo     | Significado                            |
+| ------- | ----------------- | -------------------------------------- |
+| **PHA** | Push A onto stack | Adiciona o valor atual de `A` na pilha |
+| **PHX** | Push X onto stack | Adiciona o valor atual de `X` na pilha |
+| **PHY** | Push Y onto stack | Adiciona o valor atual de `Y` na pilha |
+
+## Pull (ler/retirar) A, X, Y
+
+Também existem opcodes para retirar o valor atual da pilha para os registradores `A`, `X` ou `Y`:
+
+| Opcode  | Nome completo | Significado                                          |
+| ------- | ------------- | ---------------------------------------------------- |
+| **PLA** | Pull into A   | Retira um valor da pilha e coloca no registrador `A` |
+| **PLX** | Pull into X   | Retira um valor da pilha e coloca no registrador `X` |
+| **PLY** | Pull into Y   | Retira um valor da pilha e coloca no registrador `Y` |
+
+## Exemplo
+
+Imagine o seguinte cenário: O registrador `X` deve manter o valor $19, não importa como, mas você precisa usar `X` para outra coisa. Como se faria isso? Você deve usar `PHX` para preservar o valor de `X` na pilha, antes de usar uma instrução que modifica o conteúdo de `X`:
+
+```
+                   ; Imagine que X tem o valor $19
+PHX                ; Adiciona X ($19) na pilha. Resultado: 1° valor da pilha = #$19
+LDX $91            ; Carrega o valor de $7E0091 no registrador X
+LDA $1000, x       ; \ X agora está modificado, e usamos isso para indexar RAM
+STA $0100          ; /
+PLX                ; Restaura X. X agora contém $19 novamente
+```
+
+> Os registradores `A`, `X` e `Y` não tem uma pilha separada. Há apenas uma pilha, especificada pelo 'registrador ponteiro de pilha'. Para explicações mais detalhadas sobre o registrador de ponteiro de pilha (stack pointer register), veja: [Stack pointer register](../processor/stackpointer.md) LINK PARA REVISÃO
+
+## Operações de pilha em modo 16-bits
+
+Todas as explicações e comportamentos anteriores também se aplicam a operações de pilha de 16 *bits*. Só que você está adicionando e retirando valores de 16 *bits* e não 8 *bits*.
+
+Isso também significa que se você colocar dois valores de 8 *bits* na pilha, poderá retirar um único valor de 16 *bits* futuramente.
+
+## Outras operações de 'push' e 'pull'
+
+Outras operações de 'push' (colocar/adicionar) e 'pull' (ler/retirar), que não são afetados pelos modos 8 *bits* ou 16 *bits* para `A`, `X` e `Y`:
+
+| Opcode           | Nome completo                   | Significado                                                  | Tamanho do valor |
+| ---------------- | ------------------------------- | ------------------------------------------------------------ | ---------------- |
+| **PHB**          | Push data bank register         | Coloca o valor atual do registrador banco dos dados  na pilha. | 8 *bits*         |
+| **PLB**          | Pull data bank register         | Retira um valor da pilha e coloca no registrador banco dos dados. | 8 *bits*         |
+| **PHD**          | Push direct page register       | Coloca valor atual do registrador página direta na pilha.    | 16 *bits*        |
+| **PLD**          | Pull direct page register       | Retira um valor da pilha e adiciona ao registrador página direta. | 16 *bits*        |
+| **PHP**          | Push processor flags            | Adiciona o valor atual do registrador sinalizadores do processador na pilha. | 8 bits           |
+| **PLP**          | Pull processor flags            | Retira um valor da pilha e adiciona no registrador sinalizadores do processador. | 8 *bits*         |
+| **PHK**          | Push program bank               | Adiciona o valor de banco do opcode atualmente executado (o opcode PHK) na pilha. Não há versão 'pull' (ler/retirar) deste. | 8 *bits*         |
+| **PEA $XXXX**    | Push effective address          | Adiciona um valor específico de 16 *bits*  na pilha. Não se deixe enganar pelo nome do opcode. Ele não lê nenhum endereço. | 16 *bits*        |
+| **PEI ($XX)**    | Push effective indirect address | Adiciona o valor do endereço fornecido da página na pilha. O registrador de página direta pode afetar o endereço fornecido. | 16 *bits*        |
+| **PER *rótulo*** | Push program counter relative   | Uma adição bem complicada. Simplificando, ele coloca o endereço absoluto do rótulo indicado, na pilha. O que acontece é que, quando você fornece um rótulo, o assembler calcula a distância relativa entre o opcode PER e o rótulo fornecido. Tal distância relativa é um valor 16 *bits* com sinal, e portanto o opcode é montado em `PER $XXXX`. | 16 *bits*        |
+
+# Copiando dados
+
+O assembly de 65c816 tem dois opcodes dedicados a mover grandes blocos de dados de um local de memória para outro.
+
+| Opcode  | Nome completo       | Explicação                                                   |
+| ------- | ------------------- | ------------------------------------------------------------ |
+| **MVN** | Move block negative | Move um bloco de dados byte a byte, começando do início e trabalhando em direção ao fim |
+| **MVP** | Move block positive | Move um bloco de dados byte a byte, começando do final e trabalhando em direção ao início |
+
+`MVP` e `MVN` praticamente faz uma grande quantidade de `LDA` e `STA` em massa para alguns endereços na RAM. Você não pode mover dados para a ROM, porque a ROM é somente leitura.
+
+É altamente recomendável ter os registradores `A`, `X` e `Y` em modo 16-bit. Também é altamente recomendável preservar o data bank usando a pilha, pois o opcode `MVN` o altera implicitamente. Aqui está um exemplo de como configurar o movimento do bloco adequadamente:
+
+```
+PHB                ; Preserva o data bank
+REP #$30           ; 16-bit AXY
+                   ; ← Instruções de movimentação estão localizadas aqui
+SEP #$30           ; 8-bit AXY
+PLB                ; Recupera o data bank
+```
+
+## MVN
+
+Ao usar o `MVN`, todos os três registradores principais têm um propósito especial.
+
+| Registrador | Objetivo                                                     |
+| ----------- | ------------------------------------------------------------ |
+| A           | Especifica a quantidade de bytes a transferir, *menos 1*     |
+| X           | Especifica os bytes high e low do endereço de memória da origem |
+| Y           | Especifica os bytes high e low do endereço de memória de destino |
+
+O registrador `A` é 'menos 1'. Isso significa que se você quiser mover 4 bytes de dados, carregue $0004-1, equivalente a $0003, em `A`.
+
+`MVN` pode ser escrito de duas maneiras: 
+
+```
+MVN $xxyy
+; or
+MVN $yy, $xx
+```
+
+Onde `xx` é o banco de origem, e `yy` é o banco de destino.
+
+> Observe que quando usar a segunda forma, os parâmetros ficam invertidos
+
+Ao executar o opcode `MVN`, o SNES repete aquele mesmo opcode para cada byte transferido. Quando um byte é transferido, acontece o seguinte:
+
+| Registrador | Evento                                        |
+| ----------- | --------------------------------------------- |
+| A           | Decrementa em 1                               |
+| X           | Incrementa em 1                               |
+| Y           | Incrementa em 1                               |
+| Data bank   | É definido como o bank do endereço de destino |
+
+Vendo que `A` decrementa em 1, eventualmente ele atingirá o valor $0000, então retornará para $FFFF. Quando isso ocorre, a movimentação do bloco termina e o SNES continua a executar os opcodes seguintes.
+
+Aqui está um exemplo de movimento de bloco:
+
+```
+PHB                ; Preserva o data bank
+REP #$30           ; 16-bit AXY
+LDA #$0004         ; \
+LDX #$8908         ;  |
+LDY #$A000         ;  | Move 5 bytes de dados de $1F8908 para $7FA000
+MVN $7F, $1F       ; /
+SEP #$30           ; 8-bit AXY
+PLB                ; Recupera o data bank
+```
+
+Este exemplo moverá 5 bytes de dados do endereço $1F8098 para $7FA000.
+
+## MVP
+
+Ao usar MVP, os três registradores principais têm uma finalidade especial.
+
+| Registrador | Objetivo                                                     |
+| ----------- | ------------------------------------------------------------ |
+| A           | Especifica a quantidade de bytes a transferir, *menos 1*     |
+| X           | Especifica os bytes high e low do endereço de memória da origem |
+| Y           | Especifica os bytes high e low do endereço de memória de destino |
+
+O registrador `A` é 'menos 1'. Isso significa que se você quiser mover 4 bytes de dados, carregue $0004-1, equivalente a $0003, no `A`.
+
+MVP pode ser escrito de duas maneiras: 
+
+```
+MVP $xxyy
+;or
+MVP $yy, $xx
+```
+
+Onde `xx` é o banco de origem, e `yy` é o banco de destino.
+
+> Observe que quando usar a segunda forma, os parâmetros ficam invertidos.
+
+Ao executar o opcode `MVP`, o SNES repete aquele mesmo opcode para cada byte transferido. Deste ponto em diante, é aqui é o `MVP` difere do `MVN`. Quando um byte é transferido, acontece o seguinte:
+
+| Registrador | Evento                                        |
+| ----------- | --------------------------------------------- |
+| A           | Decrementa em 1                               |
+| X           | Decrementa em 1                               |
+| Y           | Decrementa em 1                               |
+| Data bank   | É definido como o bank do endereço de destino |
+
+Considerando que `X` e `Y` decrementam, ao invés de incrementar, isso significa que `MVP` move os blocos de dados do final para o início.
+
+Aqui está um exemplo de movimento de bloco:
+
+```
+PHB                ; Preserva o data bank
+REP #$30           ; 16-bit AXY
+LDA #$0004         ; \
+LDX #$8908         ;  |
+LDY #$A000         ;  | Move 5 bytes de dados de ($1F8908-$0004) para ($7FA000-$0004)
+MVP $7F, $1F       ; /
+SEP #$30           ; 8-bit AXY
+PLB                ; Recupera o data bank
+```
+
+Este exemplo moverá 5 bytes de dados do endereço $1F8904 para $7F9FFC. Embora a transferência aconteça invertida, os dados transferidos não serão invertidos. Ainda copiará como esperado.
+
+## Casos extremos
+
+* Quando você define o registrador `A` para $0000, significa que você moverá 1 byte.
+* Quando você define o registrador A para $FFFF, significa que você moverá 65536 bytes.
+* Quando os endereços de origem e destino cruzam o limite do bank, os bytes high e low são redefinidos para $0000, enquanto o data bank continua inalterado.
+
+## Notação rápida
+
+Asar suporta rótulos como parâmetros para `LDA`, então você pode escrever movimentos de bloco sem ter que calcular o tamanho da tabela de origem ou localizações de endereço. Os exemplos a seguir permitem tabelas de todos os tamanhos e assumem que o destino seja o endereço de memória $7FA000.
+
+Um exemplo para MVN:
+
+```
+PHB
+REP #$30
+LDA.w #SomeTable_end-SomeTable-$01
+LDX.w #SomeTable
+LDY #$A000
+MVN $7F, SomeTable>>16
+SEP #$30
+PLB
+RTS
+
+SomeTable: db $00,$01,$02,$03,$04
+.end
+```
+
+Um exemplo para `MVP`:
+
+```
+PHB
+REP #$30
+LDA.w #SomeTable_end-SomeTable-$01
+LDX.w #SomeTable+SomeTable_end-SomeTable-$01
+LDY.w #$A000+SomeTable_end-SomeTable-$01
+MVP $7F, SomeTable>>16
+SEP #$30
+PLB
+RTS
+
+SomeTable: db $00,$01,$02,$03,$04
+.end
+```
+
+Como você pode perceber, o `MVP` é consideravelmente mais complicado de ajustar.
