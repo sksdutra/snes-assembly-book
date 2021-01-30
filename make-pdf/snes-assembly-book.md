@@ -1142,19 +1142,19 @@ O assembly de 65c816 tem dois opcodes dedicados a mover grandes blocos de dados 
 
 | Opcode  | Nome completo       | Explicação                                                   |
 | ------- | ------------------- | ------------------------------------------------------------ |
-| **MVN** | Move block negative | Move um bloco de dados byte a byte, começando do início e trabalhando em direção ao fim |
-| **MVP** | Move block positive | Move um bloco de dados byte a byte, começando do final e trabalhando em direção ao início |
+| **MVN** | Move block negative | Move um bloco de dados *byte* a *byte*, começando do início e trabalhando em direção ao fim |
+| **MVP** | Move block positive | Move um bloco de dados *byte* a *byte*, começando do final e trabalhando em direção ao início |
 
-`MVP` e `MVN` praticamente faz uma grande quantidade de `LDA` e `STA` em massa para alguns endereços na RAM. Você não pode mover dados para a ROM, porque a ROM é somente leitura.
+`MVP` e `MVN` faz vários `LDA` e `STA` para alguns endereços na RAM. Você não pode mover dados para a ROM, porque a ROM é somente leitura.
 
-É altamente recomendável ter os registradores `A`, `X` e `Y` em modo 16-bit. Também é altamente recomendável preservar o data bank usando a pilha, pois o opcode `MVN` o altera implicitamente. Aqui está um exemplo de como configurar o movimento do bloco adequadamente:
+É altamente recomendável ter os registradores `A`, `X` e `Y` em modo 16 *bits*. Também é altamente recomendável preservar o banco dos dados usando a pilha, pois o opcode `MVN` o altera implicitamente. Aqui está um exemplo de como configurar o movimento do bloco adequadamente:
 
 ```
-PHB                ; Preserva o data bank
-REP #$30           ; 16-bit AXY
+PHB                ; Preserva o banco dos dados
+REP #$30           ; 16 bits AXY
                    ; ← Instruções de movimentação estão localizadas aqui
-SEP #$30           ; 8-bit AXY
-PLB                ; Recupera o data bank
+SEP #$30           ; 8 bits AXY
+PLB                ; Recupera o banco dos dados
 ```
 
 ## MVN
@@ -1163,9 +1163,9 @@ Ao usar o `MVN`, todos os três registradores principais têm um propósito espe
 
 | Registrador | Objetivo                                                     |
 | ----------- | ------------------------------------------------------------ |
-| A           | Especifica a quantidade de bytes a transferir, *menos 1*     |
-| X           | Especifica os bytes high e low do endereço de memória da origem |
-| Y           | Especifica os bytes high e low do endereço de memória de destino |
+| A           | Especifica a quantidade de *bytes* a transferir, *menos 1*   |
+| X           | Especifica os *bytes* mais e menos significativos do endereço de memória da origem |
+| Y           | Especifica os *bytes* mais e menos significativos do endereço de memória de destino |
 
 O registrador `A` é 'menos 1'. Isso significa que se você quiser mover 4 bytes de dados, carregue $0004-1, equivalente a $0003, em `A`.
 
@@ -1181,31 +1181,31 @@ Onde `xx` é o banco de origem, e `yy` é o banco de destino.
 
 > Observe que quando usar a segunda forma, os parâmetros ficam invertidos
 
-Ao executar o opcode `MVN`, o SNES repete aquele mesmo opcode para cada byte transferido. Quando um byte é transferido, acontece o seguinte:
+Ao executar o opcode `MVN`, o SNES repete aquele mesmo opcode para cada *byte* transferido. Quando um *byte* é transferido, acontece o seguinte:
 
-| Registrador | Evento                                        |
-| ----------- | --------------------------------------------- |
-| A           | Decrementa em 1                               |
-| X           | Incrementa em 1                               |
-| Y           | Incrementa em 1                               |
-| Data bank   | É definido como o bank do endereço de destino |
+| Registrador     | Evento                                         |
+| --------------- | ---------------------------------------------- |
+| A               | Decrementa em 1                                |
+| X               | Incrementa em 1                                |
+| Y               | Incrementa em 1                                |
+| Banco dos dados | É definido como o banco do endereço de destino |
 
 Vendo que `A` decrementa em 1, eventualmente ele atingirá o valor $0000, então retornará para $FFFF. Quando isso ocorre, a movimentação do bloco termina e o SNES continua a executar os opcodes seguintes.
 
 Aqui está um exemplo de movimento de bloco:
 
 ```
-PHB                ; Preserva o data bank
-REP #$30           ; 16-bit AXY
+PHB                ; Preserva o banco dos dados
+REP #$30           ; 16 bits AXY
 LDA #$0004         ; \
 LDX #$8908         ;  |
 LDY #$A000         ;  | Move 5 bytes de dados de $1F8908 para $7FA000
 MVN $7F, $1F       ; /
-SEP #$30           ; 8-bit AXY
-PLB                ; Recupera o data bank
+SEP #$30           ; 8 bits AXY
+PLB                ; Recupera o banco dos dados
 ```
 
-Este exemplo moverá 5 bytes de dados do endereço $1F8098 para $7FA000.
+Este exemplo moverá 5 *bytes* de dados do endereço $1F8908 para $7FA000.
 
 ## MVP
 
@@ -1213,9 +1213,9 @@ Ao usar MVP, os três registradores principais têm uma finalidade especial.
 
 | Registrador | Objetivo                                                     |
 | ----------- | ------------------------------------------------------------ |
-| A           | Especifica a quantidade de bytes a transferir, *menos 1*     |
-| X           | Especifica os bytes high e low do endereço de memória da origem |
-| Y           | Especifica os bytes high e low do endereço de memória de destino |
+| A           | Especifica a quantidade de *bytes* a transferir, *menos 1*   |
+| X           | Especifica os *bytes* mais e menos significativos do endereço de memória da origem |
+| Y           | Especifica os *bytes* mais e menos significativos do endereço de memória de destino |
 
 O registrador `A` é 'menos 1'. Isso significa que se você quiser mover 4 bytes de dados, carregue $0004-1, equivalente a $0003, no `A`.
 
@@ -1233,39 +1233,39 @@ Onde `xx` é o banco de origem, e `yy` é o banco de destino.
 
 Ao executar o opcode `MVP`, o SNES repete aquele mesmo opcode para cada byte transferido. Deste ponto em diante, é aqui é o `MVP` difere do `MVN`. Quando um byte é transferido, acontece o seguinte:
 
-| Registrador | Evento                                        |
-| ----------- | --------------------------------------------- |
-| A           | Decrementa em 1                               |
-| X           | Decrementa em 1                               |
-| Y           | Decrementa em 1                               |
-| Data bank   | É definido como o bank do endereço de destino |
+| Registrador     | Evento                                         |
+| --------------- | ---------------------------------------------- |
+| A               | Decrementa em 1                                |
+| X               | Decrementa em 1                                |
+| Y               | Decrementa em 1                                |
+| Banco dos dados | É definido como o banco do endereço de destino |
 
 Considerando que `X` e `Y` decrementam, ao invés de incrementar, isso significa que `MVP` move os blocos de dados do final para o início.
 
 Aqui está um exemplo de movimento de bloco:
 
 ```
-PHB                ; Preserva o data bank
+PHB                ; Preserva o banco dos dados
 REP #$30           ; 16-bit AXY
 LDA #$0004         ; \
 LDX #$8908         ;  |
 LDY #$A000         ;  | Move 5 bytes de dados de ($1F8908-$0004) para ($7FA000-$0004)
 MVP $7F, $1F       ; /
 SEP #$30           ; 8-bit AXY
-PLB                ; Recupera o data bank
+PLB                ; Recupera o banco dos dados
 ```
 
-Este exemplo moverá 5 bytes de dados do endereço $1F8904 para $7F9FFC. Embora a transferência aconteça invertida, os dados transferidos não serão invertidos. Ainda copiará como esperado.
+Este exemplo moverá 5 *bytes* de dados do endereço $1F8904 para $7F9FFC. Embora a transferência aconteça invertida, os dados transferidos não serão invertidos. Ainda copiará como esperado.
 
 ## Casos extremos
 
-* Quando você define o registrador `A` para $0000, significa que você moverá 1 byte.
-* Quando você define o registrador A para $FFFF, significa que você moverá 65536 bytes.
-* Quando os endereços de origem e destino cruzam o limite do bank, os bytes high e low são redefinidos para $0000, enquanto o data bank continua inalterado.
+* Quando você define o registrador `A` para $0000, significa que você moverá 1 *byte*.
+* Quando você define o registrador A para $FFFF, significa que você moverá 65536 *bytes*.
+* Quando os endereços de origem e destino cruzam o limite do banco, os *bytes* mais e menos significativos são redefinidos para $0000, enquanto o banco dos dados continua inalterado.
 
 ## Notação rápida
 
-Asar suporta rótulos como parâmetros para `LDA`, então você pode escrever movimentos de bloco sem ter que calcular o tamanho da tabela de origem ou localizações de endereço. Os exemplos a seguir permitem tabelas de todos os tamanhos e assumem que o destino seja o endereço de memória $7FA000.
+*Asar* suporta rótulos como parâmetros para `LDA`, então você pode escrever movimentos de bloco sem ter que calcular o tamanho da tabela de origem ou localizações de endereço. Os exemplos a seguir permitem tabelas de todos os tamanhos e assumem que o destino seja o endereço de memória $7FA000.
 
 Um exemplo para MVN:
 
@@ -1302,3 +1302,184 @@ SomeTable: db $00,$01,$02,$03,$04
 ```
 
 Como você pode perceber, o `MVP` é consideravelmente mais complicado de ajustar.
+
+# Flags e Registradores do Processador
+
+# Flags do processador
+
+Como vimos no capítulo "Modos de Operação", o SNES pode alternar entre o modo 8-bit e 16-bit usando as instruções `REP` e `SEP`. Elas alteram os flags do processador, que por sua vez alteram o comportamento do SNES. Dois dos flags do processador são dedicadas ao modo de 8-bit ou 16-bit dos registradores `A` e `X` e `Y`. Há no total 9 flags que compõem o registrador de status do processador (Processor status) e são representadas com um único byte:
+
+```
+Flags do processador
+Bits: 7   6   5   4   3   2   1   0
+
+                                 |e├──── Emulação: 0 = Modo nativo
+     |n| |v| |m| |x| |d| |i| |z| |c|
+     └┼───┼───┼───┼───┼───┼───┼───┼┘
+      │   │   │   │   │   │   │   └──────── Carry: 1 = Carry
+      │   │   │   │   │   │   └───────────── Zero: 1 = Resultado zero
+      │   │   │   │   │   └────────── IRQ Disable: 1 = IRQ Desativado
+      │   │   │   │   └───────────── Decimal Mode: 1 = Decimal, 0 = Hexadecimal
+      │   │   │   └──────── Index Register Select: 1 = 8-bit, 0 = 16-bit
+      │   │   └─────────────── Accumulator Select: 1 = 8-bit, 0 = 16-bit
+      │   └───────────────────────────── Overflow: 1 = Overflow
+      └───────────────────────────────── Negative: 1 = Negativo
+```
+
+Você pode memorizar esses flags do processador lembrando do termo `nvmxdizc`. Este capítulo explicará todos os flags do processador em detalhes.
+
+## Negative flag (n)
+
+Ele será habilitado quando o valor da última operação resultar em um numero entre $80-$FF ou $8000-$FFFF (dependendo do modo de 8-bit/16-bit).
+
+A maioria das instruções modificam e dependem dessa flag.  Essas instruções geralmente são as que fazem carregamentos, comparações e pulls, e também outras instruções que serão abordadas no capítulo [Hardware math](../math /arithmetic.md).
+
+## Overflow flag (v)
+
+Apenas quatro instruções fazem uso dessa flag. Essas instruções são: `CLV`, `ADC`, `SBC` e `BIT`. 
+Este flag é habilitado quando o valor resultante da operação anterior "cair" fora intervalo de -128 a +127.
+Por exemplo, $90+$C8=$158. Em decimal, seria -112+(-56) = -168. O valor -168 está fora do intervalo de -128 e + 127, portanto, ocorre o overflow.
+
+Para obter explicações mais detalhadas sobre como a overflow flag é modificada, consulte os capítulos [Hardware math](../math /arithmetic.md)  e [Bitwise operations](../math/logic.md).
+
+O flag overflow não afeta o comportamento do SNES. Em contra partida, existem algumas instruções de desvio que fazem uso desse flag.
+
+## Memory select (m)
+
+Este flag determina se o registrador acumulador deve estar no modo de operação de 8-bit ou 16-bit.
+
+Quando está definida como 1, ativa o modo de 8-bit para `A`.
+Quando está definida como 0, ativa o modo de 16-bit para `A`.
+
+## Index select (x)
+
+Esse flag determina se os registradores `X` e `Y` devem estar no modo de operação de  8-bit ou 16-bit
+
+Quando está definida como 1, ativa o modo de 8-bit para `X` e `Y`.
+Quando está definida como 0, ativa o modo de 16-bit para `X` e `Y`.
+
+## Decimal mode (d)
+
+Definir esta flag como 1, faz com que o SNES entre no modo decimal. Isso afetará *apenas* as instruções `ADC`, `SBC` e `CMP`.
+
+Essas instruções ajustam o acumulador em tempo real. Isso significa que, se você, por exemplo, adicionar `$03` a`$09`, o resultado será `$12` ao invés de`$0C`.
+
+Embora as operações matemáticas do modo decimal afetem adequadamente o flag carry e o flag negative, elas não fazem o mesmo com o flag overflow.
+
+# Codificação binária decimal
+
+Como esses números são armazenados em decimais, eles são armazenados em 'codificação binária decimal'(BCD). BCD é basicamente o mesmo que hexadecimal, só que com a valores $0A-0F, $1A-1F, etc... 'cortados'. A tabela a seguir mostra como funciona a contagem em BCD:
+
+| Binário    | Hexadecimal | Decimal        | BCD            |
+| ---------- | ----------- | -------------- | -------------- |
+| %0000 0000 | $00         | #00            | %0000 0000     |
+| %0000 0001 | $01         | #01            | %0000 0001     |
+| %0000 0010 | $02         | #02            | %0000 0010     |
+| %0000 0011 | $03         | #03            | %0000 0011     |
+| %0000 0100 | $04         | #04            | %0000 0100     |
+| %0000 0101 | $05         | #05            | %0000 0101     |
+| %0000 0110 | $06         | #06            | %0000 0110     |
+| %0000 0111 | $07         | #07            | %0000 0111     |
+| %0000 1000 | $08         | #08            | %0000 1000     |
+| %0000 1001 | $09         | #09            | %0000 1001     |
+| %0000 1010 | $0A         | Não disponível | Não disponível |
+| %0000 1011 | $0B         | Não disponível | Não disponível |
+| %0000 1100 | $0C         | Não disponível | Não disponível |
+| %0000 1101 | $0D         | Não disponível | Não disponível |
+| %0000 1110 | $0E         | Não disponível | Não disponível |
+| %0000 1111 | $0F         | Não disponível | Não disponível |
+| %0001 0000 | $10         | #10            | %0001 0000     |
+| %0001 0001 | $11         | #11            | %0001 0001     |
+| %0001 0010 | $12         | #12            | %0001 0010     |
+| ...        | ...         | ...            | ...            |
+| %1001 1000 | $98         | #98            | %1001 1000     |
+| %1001 1001 | $99         | #99            | %1001 1001     |
+| %1001 1010 | $9A         | Não disponível | Não disponível |
+| %1001 1011 | $9B         | Não disponível | Não disponível |
+| ...        | ...         | ...            | ...            |
+
+Neste modo, o SNES suporta cálculos matemáticos com valores de `$00` a` $99`. No modo 16-bit do acumulador, estes valores seriam de `$0000` a` $9999`.
+
+## Interrupt disable (i)
+
+Este flag determina se o IRQ do SNES está desabilitado ou não.
+
+Quando está definido como 1, o IRQ é desativado.
+Quando está definido como 0, o IRQ é habilitado.
+
+
+## Flag zero (z)
+
+A maioria das instruções modificam e dependem dessa flag.  Essa instruções geralmente são as instruções que fazem carregamentos, comparações e pulls, e também outras instruções que serão abordadas no capítulo [Hardware math](../math /arithmetic.md).
+
+O flag zero não afeta o comportamento do SNES. Em contra partida, existem algumas instruções de desvio que fazem uso dessa flag.
+
+## Carry flag (c)
+
+O SNES oferece suporte a operações matemáticas na forma de adição e subtração de números. Ele também suporta operações bitwise e bit shifting. O SNES também suporta operações lógicas, como `AND` ou `XOR`.
+
+O “flag carry” é um flag do processador usado para a maioria dessas operações aritméticas. Além disso, também é usado em instruções de desvio. Esse flag tem o mesmo conceito de "vai 1" que você aprende na escola primária. Em uma  típica conta de adição com lápis e papel, você escreveria assim:
+
+```
+  ¹
+  27
++ 59
+----
+  86
+```
+
+7 + 9 é igual a 16, portanto *vai* o 1 para a casa decimal a esquerda.
+
+Considerando que o carry é um "flag", quando o flag carry estiver definida como 0, o carry também será 0 e quando estiver definida com 1, o carry também será 1. Você pode assumir com segurança que o flag carry é o “9º bit” do  registrador `A` quando `A` estiver no modo de 8-bit e o “17º bit” quando `A` estiver no modo de 16-bit. 
+
+Supondo que `A` esteja no modo de 8-bit, a carry flag ficará assim:
+
+```
+BBBBBBBB C
+```
+
+Onde C é o flag carry e B são os bits - em outras palavras, o conteúdo do registrador `A`.
+
+Dependendo de como o carry flag estiver definido, várias instruções de operações matemáticas e de bitwise se comportarão de maneira diferente no SNES.
+
+## Flag de modo de emulação (e)
+
+Definir este flag, faz com que o 65c816 se comporte como o 6502. Quando você entra no modo de emulação:
+
+* O high byte do registrador stack pointer permanece estático como $01
+* Os registradores `A`, `X` e `Y` serão sempre de 8-bit
+* Os registradores program bank e data bank são definidos como $00
+* O registrador direct page é inicializado como $0000, e o high byte permanece estático como $00
+
+O modo de emulação do 65c816 também corrige alguns dos bugs que o 6502 tinha. Por exemplo, o modo de endereçamento indireto `JMP` agora envolve os endereços corretamente. Por exemplo: `JMP ($10FF)` obterá agora o high byte de `$1100`, ao invés de` $1000`.
+
+### Flags do processador
+
+O modo de emulação possui um conjunto diferente de flags do processador.
+
+```
+Flags do processador
+Bits: 7   6   5   4   3   2   1   0
+
+                                 |e├─── Emulação: 1 = Emulation Mode
+     |n| |v| |1| |b| |d| |i| |z| |c|
+     └┼───┼───┼───┼───┼───┼───┼───┼┘
+      │   │   │   │   │   │   │   └──────── Carry: 1 = Carry
+      │   │   │   │   │   │   └───────────── Zero: 1 = Resultado zero
+      │   │   │   │   │   └────────── IRQ Disable: 1 = Desabilitado
+      │   │   │   │   └───────────── Decimal Mode: 1 = Decimal, 0 = Hexadecimal
+      │   │   │   └─────────────────── Break Flag: 1 = Break executado
+      │   │   └─────────────────────────── Unused: 1
+      │   └───────────────────────────── Overflow: 1 = Overflow
+      └───────────────────────────────── Negative: 1 = Negativo
+```
+
+Como você pode ver, é muito semelhante as flags do processador do SNES, com algumas exceções. Os bits de mode select de `A` e `X` e `Y` são substituídos.
+
+### Flag Unused
+
+Este flag não é usada e é sempre definida como 1.
+
+### Flag Break
+
+Este flag é definida como 1 quando uma instrução `BRK` é executada no modo de emulação, portanto, ele apenas indica que houve uma interrupção; este flag não afeta realmente o SNES.
