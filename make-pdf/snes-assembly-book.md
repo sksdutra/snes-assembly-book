@@ -34,10 +34,10 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 * [A Pilha](#A-Pilha)
 * [Copiando Dados](#Copiando-Dados)
 
-## Flags e Registradores do Processador
+## Sinalizadores e Registradores do Processador
 
-* [Flags do processador](processor/flags.md)
-* [Alterando as Flags do processador](processor/repsep.md)
+* [Sinalizadores do Processador](#Sinalizadores-do-Processador)
+* [Alterando Sinalizadores do processador](#Alterando-Sinalizadores-do-Processador)
 * [Transferências](processor/transfer.md)
 * [Registrador Stack pointer](processor/stackpointer.md)
 
@@ -1303,72 +1303,72 @@ SomeTable: db $00,$01,$02,$03,$04
 
 Como você pode perceber, o `MVP` é consideravelmente mais complicado de ajustar.
 
-# Flags e Registradores do Processador
+# Sinalizadores e Registradores do Processador
 
-# Flags do processador
+# Sinalizadores do Processador
 
-Como vimos no capítulo "Modos de Operação", o SNES pode alternar entre o modo 8-bit e 16-bit usando as instruções `REP` e `SEP`. Elas alteram os flags do processador, que por sua vez alteram o comportamento do SNES. Dois dos flags do processador são dedicadas ao modo de 8-bit ou 16-bit dos registradores `A` e `X` e `Y`. Há no total 9 flags que compõem o registrador de status do processador (Processor status) e são representadas com um único byte:
+Como vimos no capítulo "Modos de Endereçamento", o SNES pode alternar entre o modo 8 *bits* e 16 *bits* usando as instruções `REP` e `SEP`. Elas alteram os sinalizadores do processador, que por sua vez alteram o comportamento do SNES. Dois dos sinalizadores do processador são dedicadas ao modo de 8 *bits* ou 16 *bits* dos registradores `A` e `X` e `Y`. Há no total 9 sinalizadores que compõem o registrador de status do processado e são representadas com um único byte:
 
 ```
-Flags do processador
+Sinalizadores do processador
 Bits: 7   6   5   4   3   2   1   0
 
-                                 |e├──── Emulação: 0 = Modo nativo
+                                 |e├───────── Emulação: 0 = Modo nativo
      |n| |v| |m| |x| |d| |i| |z| |c|
      └┼───┼───┼───┼───┼───┼───┼───┼┘
-      │   │   │   │   │   │   │   └──────── Carry: 1 = Carry
-      │   │   │   │   │   │   └───────────── Zero: 1 = Resultado zero
-      │   │   │   │   │   └────────── IRQ Disable: 1 = IRQ Desativado
-      │   │   │   │   └───────────── Decimal Mode: 1 = Decimal, 0 = Hexadecimal
-      │   │   │   └──────── Index Register Select: 1 = 8-bit, 0 = 16-bit
-      │   │   └─────────────── Accumulator Select: 1 = 8-bit, 0 = 16-bit
-      │   └───────────────────────────── Overflow: 1 = Overflow
-      └───────────────────────────────── Negative: 1 = Negativo
+      │   │   │   │   │   │   │   └───────────── Carga: 1 = Carga
+      │   │   │   │   │   │   └────────────────── Zero: 1 = Resultado zero
+      │   │   │   │   │   └────────── IRQ Desabilitado: 1 = IRQ Desabilitado
+      │   │   │   │   └────────────────── Modo Decimal: 1 = Decimal, 0 = Hexadecimal
+      │   │   │   └─────────── Seleção dos Indexadores: 1 = 8 bits, 0 = 16 bits
+      │   │   └───────────────── Seleção do Acumulador: 1 = 8 bits, 0 = 16 bits
+      │   └────────────────────────────────── Overflow: 1 = Overflow
+      └────────────────────────────────────── Negativo: 1 = Negativo
 ```
 
-Você pode memorizar esses flags do processador lembrando do termo `nvmxdizc`. Este capítulo explicará todos os flags do processador em detalhes.
+Você pode memorizar esses sinalizadores do processador lembrando do termo `nvmxdizc`. Este capítulo explicará todos os sinalizadores do processador em detalhes.
 
-## Negative flag (n)
+## Sinalizador negativo (n)
 
-Ele será habilitado quando o valor da última operação resultar em um numero entre $80-$FF ou $8000-$FFFF (dependendo do modo de 8-bit/16-bit).
+Ele será habilitado quando o valor da última operação resultar em um numero entre $80-$FF ou $8000-$FFFF (dependendo do modo de 8 bits/16 bits).
 
-A maioria das instruções modificam e dependem dessa flag.  Essas instruções geralmente são as que fazem carregamentos, comparações e pulls, e também outras instruções que serão abordadas no capítulo [Hardware math](../math /arithmetic.md).
+A maioria das instruções modificam e dependem dessa flag.  Essas instruções geralmente são as que fazem carregamentos, comparações e pulls, e também outras instruções que serão abordadas no capítulo [Hardware math](../math /arithmetic.md). LINK PARA REVISAR
 
-## Overflow flag (v)
+## Sinalizador overflow (v)
 
-Apenas quatro instruções fazem uso dessa flag. Essas instruções são: `CLV`, `ADC`, `SBC` e `BIT`. 
-Este flag é habilitado quando o valor resultante da operação anterior "cair" fora intervalo de -128 a +127.
+Apenas quatro instruções fazem uso desse sinalizador. Essas instruções são: `CLV`, `ADC`, `SBC` e `BIT`. 
+Este sinalizador é habilitado quando o valor resultante da operação anterior "cair" fora intervalo de -128 a +127.
 Por exemplo, $90+$C8=$158. Em decimal, seria -112+(-56) = -168. O valor -168 está fora do intervalo de -128 e + 127, portanto, ocorre o overflow.
 
-Para obter explicações mais detalhadas sobre como a overflow flag é modificada, consulte os capítulos [Hardware math](../math /arithmetic.md)  e [Bitwise operations](../math/logic.md).
+Para obter explicações mais detalhadas sobre como o sinalizador overflow é modificada, consulte os capítulos [Hardware math](../math /arithmetic.md)  e [Bitwise operations](../math/logic.md). LINKS PARA REVISAR
 
-O flag overflow não afeta o comportamento do SNES. Em contra partida, existem algumas instruções de desvio que fazem uso desse flag.
+O sinalizador overflow não afeta o comportamento do SNES. Em contra partida, existem algumas instruções de desvio que fazem uso do mesmo.
 
-## Memory select (m)
+## Seleção de memória (m)
 
-Este flag determina se o registrador acumulador deve estar no modo de operação de 8-bit ou 16-bit.
+Este sinalizador determina se o registrador acumulador está no modo de operação de 8 *bits* ou 16 *bits*.
 
-Quando está definida como 1, ativa o modo de 8-bit para `A`.
-Quando está definida como 0, ativa o modo de 16-bit para `A`.
+Quando está definido como 1, ativa o modo de 8 *bits* para `A`.
+Quando está definido como 0, ativa o modo de 16 *bits* para `A`.
 
-## Index select (x)
+## Seleção dos indexadores (x)
 
-Esse flag determina se os registradores `X` e `Y` devem estar no modo de operação de  8-bit ou 16-bit
+Esse sinalizador determina se os registradores `X` e `Y` estão no modo de operação de  8 *bits* ou 16 *bits*.
 
-Quando está definida como 1, ativa o modo de 8-bit para `X` e `Y`.
-Quando está definida como 0, ativa o modo de 16-bit para `X` e `Y`.
+Quando está definido como 1, ativa o modo de 8 *bits* para `X` e `Y`.
+Quando está definido como 0, ativa o modo de 16 *bits* para `X` e `Y`.
 
-## Decimal mode (d)
+## Modo decimal (d)
 
-Definir esta flag como 1, faz com que o SNES entre no modo decimal. Isso afetará *apenas* as instruções `ADC`, `SBC` e `CMP`.
+Definir este sinalizador como 1, faz com que o SNES entre no modo decimal. Isso afetará *apenas* as instruções `ADC`, `SBC` e `CMP`.
 
 Essas instruções ajustam o acumulador em tempo real. Isso significa que, se você, por exemplo, adicionar `$03` a`$09`, o resultado será `$12` ao invés de`$0C`.
 
-Embora as operações matemáticas do modo decimal afetem adequadamente o flag carry e o flag negative, elas não fazem o mesmo com o flag overflow.
+Embora as operações matemáticas do modo decimal afetem adequadamente o sinalizador de carga e o negativo, elas não fazem o mesmo com o sinalizador overflow.
 
-# Codificação binária decimal
+### Codificação binária decimal
 
-Como esses números são armazenados em decimais, eles são armazenados em 'codificação binária decimal'(BCD). BCD é basicamente o mesmo que hexadecimal, só que com a valores $0A-0F, $1A-1F, etc... 'cortados'. A tabela a seguir mostra como funciona a contagem em BCD:
+Como esses números são armazenados em decimal, eles são armazenados em 'codificação binária decimal'(BCD). BCD é basicamente o mesmo que hexadecimal, só que com a valores $0A-0F, $1A-1F, etc... 'cortados'. A tabela a seguir mostra como funciona a contagem em BCD:
 
 | Binário    | Hexadecimal | Decimal        | BCD            |
 | ---------- | ----------- | -------------- | -------------- |
@@ -1398,27 +1398,27 @@ Como esses números são armazenados em decimais, eles são armazenados em 'codi
 | %1001 1011 | $9B         | Não disponível | Não disponível |
 | ...        | ...         | ...            | ...            |
 
-Neste modo, o SNES suporta cálculos matemáticos com valores de `$00` a` $99`. No modo 16-bit do acumulador, estes valores seriam de `$0000` a` $9999`.
+Neste modo, o SNES suporta cálculos matemáticos com valores de `$00` a` $99`. No modo 16 *bits* do acumulador, estes valores seriam de `$0000` a` $9999`.
 
-## Interrupt disable (i)
+## Interrupção desabilitada (i)
 
-Este flag determina se o IRQ do SNES está desabilitado ou não.
+Este sinalizador determina se o IRQ do SNES está desabilitado ou não.
 
-Quando está definido como 1, o IRQ é desativado.
+Quando está definido como 1, o IRQ é desabilitado.
 Quando está definido como 0, o IRQ é habilitado.
 
 
-## Flag zero (z)
+## Sinalizador zero (z)
 
-A maioria das instruções modificam e dependem dessa flag.  Essa instruções geralmente são as instruções que fazem carregamentos, comparações e pulls, e também outras instruções que serão abordadas no capítulo [Hardware math](../math /arithmetic.md).
+A maioria das instruções modificam e dependem desse sinalizador.  Essa instruções geralmente são as instruções que fazem carregamentos, comparações e pulls, e também outras instruções que serão abordadas no capítulo [Hardware math](../math /arithmetic.md). LINK PARA REVISAR
 
-O flag zero não afeta o comportamento do SNES. Em contra partida, existem algumas instruções de desvio que fazem uso dessa flag.
+O sinalizador zero não afeta o comportamento do SNES. Em contra partida, existem algumas instruções de desvio que fazem uso do mesmo.
 
-## Carry flag (c)
+## Sinalizador carga (c)
 
-O SNES oferece suporte a operações matemáticas na forma de adição e subtração de números. Ele também suporta operações bitwise e bit shifting. O SNES também suporta operações lógicas, como `AND` ou `XOR`.
+O SNES oferece suporte a operações matemáticas na forma de adição e subtração de números. Ele também suporta operações *bit* a *bit* e de deslocamento de *bits*. O SNES também suporta operações lógicas, como `AND` ou `XOR`.
 
-O “flag carry” é um flag do processador usado para a maioria dessas operações aritméticas. Além disso, também é usado em instruções de desvio. Esse flag tem o mesmo conceito de "vai 1" que você aprende na escola primária. Em uma  típica conta de adição com lápis e papel, você escreveria assim:
+O “sinalizador carga” é um sinalizador do processador usado para a maioria dessas operações aritméticas. Além disso, também é usado em instruções de desvio. Esse sinalizador tem o mesmo conceito de "vai um" que você aprende na escola primária. Em uma  típica conta de adição com lápis e papel, você escreveria assim:
 
 ```
   ¹
@@ -1428,19 +1428,19 @@ O “flag carry” é um flag do processador usado para a maioria dessas operaç
   86
 ```
 
-7 + 9 é igual a 16, portanto *vai* o 1 para a casa decimal a esquerda.
+7 + 9 é igual a 16, portanto *vai um* para a casa decimal a esquerda.
 
-Considerando que o carry é um "flag", quando o flag carry estiver definida como 0, o carry também será 0 e quando estiver definida com 1, o carry também será 1. Você pode assumir com segurança que o flag carry é o “9º bit” do  registrador `A` quando `A` estiver no modo de 8-bit e o “17º bit” quando `A` estiver no modo de 16-bit. 
+Considerando que essa carga é um "sinalizador", quando este estiver definido como 0, a carga também será 0 e quando estiver definida com 1, a carga também será 1. Você pode assumir com segurança que o sinalizador carga é o “9º *bit*” do  registrador `A` quando `A` estiver no modo de 8 *bits*  e o “17º *bit*” quando `A` estiver no modo de 16 *bits*. 
 
-Supondo que `A` esteja no modo de 8-bit, a carry flag ficará assim:
+Supondo que `A` esteja no modo de 8 *bits*, o sinalizador carga ficará assim:
 
 ```
 BBBBBBBB C
 ```
 
-Onde C é o flag carry e B são os bits - em outras palavras, o conteúdo do registrador `A`.
+Onde C é o sinalizador carga e B são os *bits* - em outras palavras, o conteúdo do registrador `A`.
 
-Dependendo de como o carry flag estiver definido, várias instruções de operações matemáticas e de bitwise se comportarão de maneira diferente no SNES.
+Dependendo de como o sinalizador carga estiver definido, várias instruções de operações matemáticas e *bit* a *bit* se 0comportarão de maneira diferente no SNES.
 
 ## Flag de modo de emulação (e)
 
@@ -1455,31 +1455,95 @@ O modo de emulação do 65c816 também corrige alguns dos bugs que o 6502 tinha.
 
 ### Flags do processador
 
-O modo de emulação possui um conjunto diferente de flags do processador.
+O modo de emulação possui um conjunto diferente de sinalizadores do processador.
 
 ```
-Flags do processador
+Sinalizadores do processador
 Bits: 7   6   5   4   3   2   1   0
 
-                                 |e├─── Emulação: 1 = Emulation Mode
-     |n| |v| |1| |b| |d| |i| |z| |c|
+                                 |e├───────── Emulação: 1 = Modo Emulação
+     |n| |v| |m| |x| |d| |i| |z| |c|
      └┼───┼───┼───┼───┼───┼───┼───┼┘
-      │   │   │   │   │   │   │   └──────── Carry: 1 = Carry
-      │   │   │   │   │   │   └───────────── Zero: 1 = Resultado zero
-      │   │   │   │   │   └────────── IRQ Disable: 1 = Desabilitado
-      │   │   │   │   └───────────── Decimal Mode: 1 = Decimal, 0 = Hexadecimal
-      │   │   │   └─────────────────── Break Flag: 1 = Break executado
-      │   │   └─────────────────────────── Unused: 1
-      │   └───────────────────────────── Overflow: 1 = Overflow
-      └───────────────────────────────── Negative: 1 = Negativo
+      │   │   │   │   │   │   │   └───────────── Carga: 1 = Carga
+      │   │   │   │   │   │   └────────────────── Zero: 1 = Resultado zero
+      │   │   │   │   │   └────────── IRQ Desabilitado: 1 = IRQ Desabilitado
+      │   │   │   │   └────────────────── Modo Decimal: 1 = Decimal, 0 = Hexadecimal
+      │   │   │   └───────────────── Sinalizador Break: 1 = Break executado
+      │   │   └───────────────────────── Não utilizado: 1
+      │   └────────────────────────────────── Overflow: 1 = Overflow
+      └────────────────────────────────────── Negativo: 1 = Negativo
 ```
 
-Como você pode ver, é muito semelhante as flags do processador do SNES, com algumas exceções. Os bits de mode select de `A` e `X` e `Y` são substituídos.
+Como você pode ver, é muito semelhante aos sinalizadores do processador do SNES, com algumas exceções. Os *bits* da seleção de modo para `A`, `X` e `Y` são substituídos.
 
-### Flag Unused
+### Sinalizador não utilizado
 
-Este flag não é usada e é sempre definida como 1.
+Este sinalizador não é usada e é sempre definida como 1.
 
-### Flag Break
+### Sinalizador Break
 
-Este flag é definida como 1 quando uma instrução `BRK` é executada no modo de emulação, portanto, ele apenas indica que houve uma interrupção; este flag não afeta realmente o SNES.
+Este sinalizador é definido como 1 quando uma instrução `BRK` é executada no modo de emulação, portanto, ele apenas indica que houve uma interrupção; este sinalizador não afeta realmente o SNES.
+
+# Alterando Sinalizadores do Processador
+
+Como visto no [capítulo anterior](#Sinalizadores-do-Processador) o SNES suporta 9 sinalizadores do processador. Há formas de afetar essas flags, que serão explicadas nesse capítulo.
+
+## SEP
+
+| Opcode  | Nome completo       | Explicação                                                  |
+| ------- | ------------------- | ----------------------------------------------------------- |
+| **SEP** | Set processor flags | Define os sinalizadores de processador especificados para 1 |
+
+`SEP` define os *bits* dos sinalizadores do processador selecionados para 1.
+
+`SEP` é usada da seguinte forma:
+
+```
+;nvmxdizc = 0000 0000
+SEP #$80 ;= 1000 0000
+;Nvmxdizc = 1000 0000
+```
+
+As letras destacadas em maiúscula são dos sinalizadores do processador que estão habilitados. Este código ativa o sinalizador negativo.
+
+## REP
+
+| Opcode  | Nome completo         | Explicação                                          |
+| ------- | --------------------- | --------------------------------------------------- |
+| **REP** | Reset processor flags | Define as flags de processador especificadas para 0 |
+
+`REP` define os *bits* dos sinalizadores de processador selecionados para 0.
+
+`REP`é usada da seguinte forma:
+
+```
+;NvmxDizc = 1000 1000
+REP #$08 ;= 0000 1000
+;Nvmxdizc = 1000 0000
+```
+
+Inicialmente, os sinalizadores modo decimal e negativo estavam habilitados, após a instrução `REP #$08`, o sinalizador modo decimal foi desabilitado, porém, o sinalizador negativo continuou inalterado.
+
+## XCE e o modo de emulação
+
+Como o *bit* do emulation mode 'escondido' acima do sinalizador de carga, há um opcode que troca o sinalizador de carga pelo *bit* do modo de emulação.
+
+| Opcode  | Nome completo                | Explicação                                                   |
+| ------- | ---------------------------- | ------------------------------------------------------------ |
+| **XCE** | Exchange carry and emulation | Troca os valores do sinalizador de carga com o sinalizador do modo de emulação |
+
+Você pode ter acesso ao modo de emulação usando `SEC` e então `XCE`, e sair do mesmo usando `CLC` e então `XCE`. Por padrão, o SNES inicializa no modo de emulação. Esta é a razão para que os opcodes `CLC` e `XCE` estejam entre os primeiros quando é realizado um *disassembly*.
+
+## Outros opcodes
+
+Há outros opcodes que afetam imediatamente um único sinalizador do processador.
+
+| Opcode  | Full name                    | Explanation                                                  |
+| ------- | ---------------------------- | ------------------------------------------------------------ |
+| **SEI** | Set interrupt disable flag   | Habilita o sinalizador interrupção desabilitada, tornando-o 1, desativando assim o IRQ |
+| **CLI** | Clear interrupt disable flag | Desabilita o sinalizador interrupção desabilitada, tornando-o 0, ativando assim o IRQ |
+| **SED** | Set decimal flag             | Habilita o sinalizador modo decimal, tornando-o 1, mudando o SNES para o modo decimal |
+| **CLD** | Clear decimal flag           | Desabilita o sinalizador modo decimal, tornando-o 0, mudando o SNES para o modo hexadecimal |
+| **SEC** | Set carry flag               | Habilita o sinalizador carga, tornando-o 1                   |
+| **CLC** | Clear carry flag             | Desabilita o sinalizador carga, tornando-o 0                 |
+| **CLV** | Clear overflow flag          | Desabilita o sinalizador overflow, tornando-o 0              |
