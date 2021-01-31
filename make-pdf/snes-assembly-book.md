@@ -38,8 +38,8 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 
 * [Sinalizadores do Processador](#Sinalizadores-do-Processador)
 * [Alterando Sinalizadores do processador](#Alterando-Sinalizadores-do-Processador)
-* [Transferências](processor/transfer.md)
-* [Registrador Stack pointer](processor/stackpointer.md)
+* [Transferências](#Transferências)
+* [Registrador Ponteiro da Pilha](#Registrador-Ponteiro-da-Pilha)
 
 ## Matemática e Lógica
 
@@ -1547,3 +1547,150 @@ Há outros opcodes que afetam imediatamente um único sinalizador do processador
 | **SEC** | Set carry flag               | Habilita o sinalizador carga, tornando-o 1                   |
 | **CLC** | Clear carry flag             | Desabilita o sinalizador carga, tornando-o 0                 |
 | **CLV** | Clear overflow flag          | Desabilita o sinalizador overflow, tornando-o 0              |
+
+# Transferências
+
+Imagine a seguinte situação: Você está usando o registrador `X` e gostaria de adicionar mais #$40. Há o `INX` que incrementa o valor de `X` em um, mas que tal somar $40? Não há instrução que aumenta o valor em `X` em mais que 1, [mas há um](.../math/arithmetic.md) LINK PARA REVISAR que aumenta o valor em `A`. Como se passa valor `A` para `X`?
+
+Há uma série de instruções que possuem exatamente essa finalidade, e eles são chamados de "transferidoras". Elas realizam transferências de valores de um registador para o outro, todas começando com a letra "T".
+
+## Transferindo A, X e Y
+
+Existem instruções que transferem os valores entre os registradores `A`, `X` e `Y`. Todas as combinações são possíveis:
+
+| Opcode  | Nome completo   | Explicação                    |
+| ------- | --------------- | ----------------------------- |
+| **TAX** | Transfer A to X | Transfere o valor de A para X |
+| **TAY** | Transfer A to Y | Transfere o valor de A para Y |
+| **TXA** | Transfer X to A | Transfere o valor de X para A |
+| **TXY** | Transfer X to Y | Transfere o valor de X para Y |
+| **TYA** | Transfer Y to A | Transfere o valor de Y para A |
+| **TYX** | Transfer Y to X | Transfere o valor de Y para X |
+
+As instruções são auto-explicativas. Veja um exemplo de uma transferência:
+
+```
+LDA #$45 ;A = $45
+LDY #$99 ;Y = $99
+TAY      ;A = $45, Y = $45
+```
+
+Como você pode ver, os valores são *copiados* para o registrador de destino.
+
+## Modos 8 e 16 bits
+
+As transferências funcionam da mesma forma quando os registradores de origem e destino são ambos de 16 *bits*:
+
+```
+LDA #$4512 ;A = $4512
+LDY #$9900 ;Y = $9900
+TAY        ;A = $4512, Y = $4512
+```
+
+Se você quiser transferir o valor de um registrador de 8 *bits* para um de 16 *bits*, o SNES analisa o tamanho do registrador alvo, e transfere apenas o valor do *byte* menos significativo. O exemplo a seguir, temos uma transferência de `Y` de 8 *bits* para `A` de 16 *bits* :
+
+```
+LDA #$4512 ;A = $4512
+LDY #$99   ;Y = $0099
+TYA        ;A = $4599, Y = $0099
+```
+
+E aqui mais um exemplo de transferência de `Y` de 16 *bits* para `A` de 8 *bits* :
+
+```
+LDA #$45   ;A = $xx45
+LDY #$99AA ;Y = $99AA
+TYA        ;A = $xxAA, Y = $99AA
+```
+
+No segundo exemplo, o `xx` pode ser qualquer coisa. Lembre-se de que [na introdução aos registradores A, X e Y](#Os-Registradores-do-SNES), é mencionado que o registrador `A` sempre terá  16 *bits*. O *byte* mais significativo não é afetado durante a transferência, mesmo que `A` esteja no modo 8 *bits*. Se o valor de `A` era `$1245` antes da transferência, após a transferência seu valor será `$12AA`  Isto não se aplica a `X` e `Y`, pois seus *bytes* mais significativos serão imediatamente apagados quando entram do modo 8 *bits*.
+
+## Transferência entre registradores de uso geral
+
+Há mais instruções que envolvem os registradores de uso geral do SNES.
+
+| Opcode  | Nome completo                        | Explicação                                                   |
+| ------- | ------------------------------------ | ------------------------------------------------------------ |
+| **TCD** | Transfer A to direct page register   | Transfere o valor 16 *bits* de `A` para o registrador página direta, independentemente de `A` estar ou não no modo 16 *bits* |
+| **TDC** | Transfer direct page register to A   | Transfere o valor de 16 *bits* do registrador página direta para `A`, independentemente de `A` estar ou não no modo 16 *bits* |
+| **TCS** | Transfer A to stack pointer register | Transfere o valor de 16 *bits* de `A` para o registrador ponteiro da pilha, independentemente de `A` estar ou não no modo 16 *bits* |
+| **TSC** | Transfer stack pointer register to A | Transfere o valor de 16 *bits* do registrador ponteiro da pilha para  `A`, independentemente de `A` estar ou não no modo 16 *bits* |
+| **TXS** | Transfer X to stack pointer register | Transfere o valor de 16 *bits* de `X` para o registrador ponteiro da pilha, independentemente de `X` estar ou não no modo 16 *bits*. Note que quando `X` estiver no modo de 8 *bits*, seu o *byte* mais significativo será $00 |
+| **TSX** | Transfer stack pointer register to X | Transfere o valor de 16 *bits* do registrador ponteiro da pilha para  `X`. Observe que quando `X` estiver no modo 8 *bits*, seu *byte* mais significativo permanece $00 após a transferência |
+
+# Registrador Ponteiro da Pilha
+
+O ponteiro da pilha é um registrador de 16 *bits* que o processador usa para determinar a localização atual da pilha na RAM do SNES. Após cada envio(*push*), o ponteiro da pilha *decrementa*, de modo que os *bytes* são "empurrados" para trás. Eles substituem o conteúdo do endereço da RAM. Por outro lado, após cada retirada(*pull*), o ponteiro da pilha *incrementa*, mas o valor retirado ainda permanece na pilha. Portanto, *pull* é na verdade uma leitura. O ponteiro da pilha aumenta ou diminui em 1 quando se trata de valores 8 *bits* e em 2 quando se para valores 16 *bits*. Isso pode ser resumido da seguinte forma:
+
+| Operação             | Onde                          | Atualização do stack pointer |
+| -------------------- | ----------------------------- | ---------------------------- |
+| Envio (8 *bits*)     | Local do ponteiro da pilha    | -1                           |
+| Retirada (8 *bits*)  | Local do ponteiro da pilha +1 | +1                           |
+| Envio (16 *bits*)    | Local do ponteiro da pilha    | -2                           |
+| Retirada (16 *bits*) | Local do ponteiro da pilha +1 | +2                           |
+
+O registrador ponteiro da pilha assume que vai trabalhar com o banco $00, independentemente do valor atual do registrador do banco dos dados. Isso significa que, do ponto de vista do mapeamento de memória do SNES, se o ponteiro da pilha apontar para o endereço absoluto $8000 ou acima, ele começará a apontar para a ROM. Se apontar para o endereço absoluto $2000 ou acima, ele começará a apontar para os registradores de *hardware* do SNES. Portanto, a única área de pilha utilizável é de $000000 a $001FFF.
+
+A pilha não tem tamanho definido. Em contra partida, você como programador, apenas reserva uma área de RAM para a pilha que acha que é necessário. A razão pela qual não tem um tamanho definido é porque enquanto você continua empurrando, o ponteiro da pilha continua diminuindo sem nenhum limite definido. Se você empurrar muitos valores, poderá sobrescrever acidentalmente outros endereços de RAM que têm outras finalidades predeterminadas.
+
+## Envio
+
+Aqui temos um exemplo de como a pilha funciona do ponto de vista da RAM, quando você envia valores de 8 *bits*:
+
+```
+         ; Pilha: .. 55 55 55 55 55 55 ..
+LDA #$42                             └─ O ponteiro da pilha aponta para este valor.
+PHA
+         ; Pilha: .. 55 55 55 55 55 42 ..
+LDA #$AA                          └─ O ponteiro da pilha aponta para este valor.
+PHA
+         ; Pilha: .. 55 55 55 55 AA 42 ..
+                               └─ O ponteiro da pilha aponta para este valor.
+```
+
+E aqui temos um exemplo de envio de 16 *bits*:
+
+```
+REP #$20 ; registrador A no modo 16 bits
+         ; Pilha: .. 55 55 55 55 55 55 ..
+LDA #$4210                           └─ O ponteiro da pilha aponta para este valor.
+PHA
+         ; Pilha: .. 55 55 55 55 10 42 ..
+LDA #$AA99                     └─ O ponteiro da pilha aponta para este valor.
+PHA
+         ; Pilha: .. 55 55 99 AA 10 42 ..
+                         └─ O ponteiro da pilha aponta para este valor.
+```
+
+## Retirada
+
+Quando você "retira" algo da pilha, ele é lido do local do ponteiro da pilha +1. Após cada extração, o stack pointer aumenta dependendo do tamanho do valor retirado. Você não extrai literalmente o valor da RAM. Você apenas copia o valor do local da pilha para o registrador de destino. O valor na pilha continua inalterado.
+
+Aqui temos um exemplo de retirada de um valor 8 *bits*:
+
+```
+        ; Pilha: .. 55 55 12 34 56 78 ..
+                           └─ O ponteiro da pilha aponta para este valor.
+PLA     ; Agora A é $34
+        ; Pilha: .. 55 55 12 34 56 78 ..
+                              └─ O ponteiro da pilha aponta para este valor.
+PLA
+        ; Agora A é $56
+        ; Pilha: .. 55 55 12 34 56 78 ..
+                                 └─ O ponteiro da pilha aponta para este valor.
+```
+
+E temos um exemplo de retirada de um valor 16 *bits*:
+
+```
+REP #$20 ; registrador A no modo 16 bits
+         ; Pilha: .. 55 55 12 34 56 78 ..
+                         └─ O ponteiro da pilha aponta para este valor.
+PLA      ; Agora A é $3412
+         ; Pilha: .. 55 55 12 34 56 78 ..
+                               └─ O ponteiro da pilha aponta para este valor.
+PLA
+         ; Agora A é $7856
+         ; Pilha: .. 55 55 12 34 56 78 ..
+                                     └─ O ponteiro da pilha aponta para este valor.
+```
