@@ -43,7 +43,7 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 
 ## Matemática e Lógica
 
-* [Operações aritméticas](math/arithmetic.md)
+* [Operações Aritméticas](#Operações-Aritméticas)
 * [Operações de deslocamento de bits](math/shift.md)
 * [Operações bit a bit](math/logic.md)
 * [Hardware math](math/math.md)
@@ -1694,3 +1694,328 @@ PLA
          ; Pilha: .. 55 55 12 34 56 78 ..
                                      └─ O ponteiro da pilha aponta para este valor.
 ```
+
+# Matemática e Lógica
+
+# Operações Aritméticas
+
+Em algum momento, você provavelmente vai querer *incrementar* o endereço $7E000F da RAM em $01, mas um simples `LDA` e `STA`  não resolverão, isso porque você simplesmente está alterando o conteúdo do endereço da RAM para $01, ao invés de incrementá-lo. Talvez você prefira incrementar em 2 ou até mesmo multiplicar por 2.
+
+O SNES possui algumas instruções que são capazes de fazer operações matemáticas básicas.
+
+## INC e DEC
+
+Essas são instruções para somar ou subtrair um valor em 1.
+
+| Opcode  | Nome completo | Explicação                                |
+| ------- | ------------- | ----------------------------------------- |
+| **INC** | Increase      | Incrementa o acumulador ou a memória em 1 |
+| **DEC** | Decrease      | Decrementa o acumulador ou a memória em 1 |
+
+`INC` e `DEC` suportam tanto o acumulador quanto endereços. Segue um exemplo de incremento do acumulador em 1:
+
+```
+LDA #$02           ; Carrega o valor $02 no acumulador
+INC A              ; Incrementa o acumulador em 1. Agora A é igual a $03
+```
+
+E mais um exemplo para decrementar o acumulador em 1:
+
+```
+LDA #$02           ; Carrega o valor $02 no acumulador
+DEC A              ; Decrementa o acumulador em 1. Agora A é igual a $01
+```
+
+A seguir um exemplo de como incrementar o valor de um endereço em 1:
+
+```
+INC $0F            ; Incrementa o valor em $7E000F em 1
+RTS                ; Fim.
+```
+
+E mais um exemplo para deprementar o valor do endereço em 1:
+
+```
+DEC $0F            ; Decrementa o valor em $7E000F em 1
+RTS                ; Fim
+```
+
+Quando você usa o `INC` e o valor que está sendo incrementado for o $FF, resultará em $00 e o sinalizador zero será definido como 1. Por outro lado, se  você usa `DEC` e o valor que está sendo modificado é $00, resulta em $FF.
+
+> `INC` e `DEC` não funcionam com modos de endereçamento longos. Eles funcionam apenas com modos de endereçamento página direta ou absoluto. Portanto, instruções como `INC $7E000F` são inválidas. Em contrapartida,, você deve usar `INC $000F` ou `INC $0F`.
+>
+> Por que não existe um modo de endereçamento longo? O processador foi simplesmente criado para funcionar dessa maneira, então você terá que lidar com isso de uma forma ou de outra.
+
+## INX, DEX, INY e DEY
+
+Também existem instruções para incrementar ou decrementar os valores dos indexadores X e Y:
+
+| Opcode  | Nome completo | Explicação        |
+| ------- | ------------- | ----------------- |
+| **INX** | Increase X    | Incrementa X em 1 |
+| **DEX** | Decrease X    | Decrementa X em 1 |
+| **INY** | Increase Y    | Incrementa Y em 1 |
+| **DEY** | Decrease Y    | Decrementa Y em 1 |
+
+Você não pode usar as quatro intruções acima para manipular um endereço. Elas são usados exclusivamente para os registradores `X` e `Y`.
+
+## ADC e SBC
+
+E se você quisesse aumentar ou diminuir um valor em, digamos, 95, você não ia querer escrever `INC` ou `DEC` 95 vezes. Felizmente, o SNES também tem instruções para essas situações.
+
+| Opcode  | Nome completo       | Explicação                        |
+| ------- | ------------------- | --------------------------------- |
+| **ADC** | Add with carry      | Adiciona um determinado valor a A |
+| **SBC** | Subtract with carry | Subtrai um determinado valor de A |
+
+> Apenas para enfatizar: `ADC` adiciona um valor ao acumulador, não um endereço de RAM. `SBC` subtrai um valor do acumulador.
+
+Com `ADC` e `SBC`, você pode fazer operações de somar e subtrair com valores usando endereços. Segue um exemplo que adiciona 4 ao valor de um endereço:
+
+```
+LDA $0F            ; Carrega o valor do endereço em A
+CLC                ; Desabilita o sinalizador de carga
+ADC #$04           ; Adiciona $04 a A.
+STA $0F            ; Grava o valor de A em $0F
+```
+
+Como o `ADC` altera `A` em vez de endereços, você deve primeiro carregar o valor do endereço em `A`, depois fazer a adição e, em seguida, armazenar o resultado de volta no endereço.
+
+Se o sinalizador de carga não fosse desabilitado, seria adicionado $05 ao invés de $04. Ademais, é importante certificar-se acerca do sinalizador de carga, desabilitando-o com um `CLC`, antes de usar `ADC`.
+
+O oposto também é válido para subtrair:
+
+```
+LDA $0F            ; Carregua o valor do endereço em A
+SEC                ; Habilita o sinalizador de carga
+SBC #$04           ; subtrai $04 de A.
+STA $0F            ; Grava o valor de A em $0F
+```
+
+Isso subtrairá 4 do conteúdo do endereço de RAM (`$0F-#$04`). Você notará que, para subtrair, habilitamos o sinalizador de carga ao invés de habilitá-lo. Se você não habilitar o sinalizador de carga, será subtraído $05 em vez de $04. Isso pode parecer estranho, mas é assim  que o processador funciona.
+
+> Resumindo: ao adicionar, use `CLC`. Ao subtrair, use `SEC`.
+
+### Sinalizador de carga
+
+Quando você usa `ADC`, se o valor em `A` mudar de $FF passa para $00, o sinalizador de carga é habilitado. Isso também é válido para `A` no modo 16 *bits*, quando o valor passar de $FFFF ele será $0000.
+
+Já no caso do `SBC`, se o valor em A passar de $00 para $FF, o sinalizador de carga é desabilitado. Isso também é válido para `A` no modo 16-bit, quando o valor passar de $0000 para $FFFF.
+
+Com isso, você pode usar o sinalizador de carga para verificar se algum valor excedeu o tamanho máximo do registrador.
+
+### Sinalizador overflow
+
+Os opcodes`ADC` e `SBC` são únicos no sentido de que são dois dos três opcodes que podem afetar o sinalizador *overflow* do processador como resultado de um cálculo.
+
+O sinalizador overflow é especialmente relevante quando você decide tratar os valores como valores com sinal. Você se lembra do capítulo hexadecimal? Os valores de $00 a $7F são considerados positivos e os valores $80-$FF são considerados negativos.
+
+O sinalizador overflow é definido quando o resultado de uma operação não faz sentido no mundo da matemática:
+
+* Adicionando um valor negativo a um valor negativo e obtendo um valor positivo como resultado, quando deveria ser negativo;
+* Adicionando um valor positivo a um valor positivo e obtendo um valor negativo como resultado, quando deveria ser positivo;
+* Subtraindo um valor positivo de um valor negativo e obtendo um valor positivo como resultado, quando o valor negativo deveria ser ainda mais negativo;
+* Subtraindo um valor negativo de um valor positivo e obtendo um valor negativo como resultado, quando o valor deveria ser ainda mais positivo
+
+As regras matemáticas estão em jogo aqui. Adicionar dois números negativos resulta em um número negativo (`-10 +-1 = -11`). Subtrair dois números negativos resulta em um número negativo (por exemplo, `-10 - -1 = -9`). Subtrair um valor negativo é igual a uma adição (por exemplo, `10 - -1 = 11`). Adicionar um valor negativo equivale a uma subtração (por exemplo, `10 + -1 = 9`). Os cenários descritos nos tópicos acima quebram essas regras.
+
+Aqui estão alguns exemplos do sinalizador overflow sendo habilitado:
+
+```
+LDA #$88           ; -120 em decimal
+CLC                ; -120 + (-16) = -136
+ADC #$F0           ; $88 + $F0 = $78, que é 120, o que não faz sentido matematicamente
+```
+
+```
+LDA #$80           ; -128 em decimal
+SEC                ; -128 - 16 = -144
+SBC #$10           ; $80 - $10 = $70, que é 112, o que não faz sentido matematicamente
+```
+
+```
+LDA #$30           ; Número 48
+CLC                ; 48 + 112 = 160
+ADC #$70           ; $30 + $70 = $A0, que é -96, o que não faz sentido matematicamente
+```
+
+```
+LDA #$10           ; Numero 16
+SEC                ; Fazemos 16 -(-128), o que deve resultar em 144
+SBC #$80           ; $10 - $80 = $90, que é -112, o que não faz sentido matematicamente
+```
+
+## Modo de operação 16 bits
+
+Todas as explicações e comportamentos anteriores também se aplicam ao modo 16-bit.
+
+# Operações de deslocamento de bits
+
+O 'deslocamento de bits' é uma operação bit a bit em que você move os bits para a esquerda ou direita. Como resultado, praticamente falando, você divide ou multiplica um número por dois.
+
+## ASL e LSR
+
+Existem dois opcodes que deslocam bits para a esquerda ou direita.
+
+| Opcode  | Nome completo                           | Explicação                                                   |
+| ------- | --------------------------------------- | ------------------------------------------------------------ |
+| **ASL** | A ou mudança de memória para a esquerda | Move os bits para a esquerda uma vez sem carry, praticamente multiplicando um valor por 2 |
+| **LSR** | A ou mudança de memória para a esquerda | Move os bits para a direita uma vez sem carry, praticamente dividindo um valor por 2 |
+
+ASL e LSR podem afetar A ou um endereço, assim como INC e DEC. Aqui está um exemplo de ASL em ação:
+
+```
+LDA #$02           ; Carregue o valor $02 em A
+ASL A              ; Multipica A por 2
+                   ; A agora é $04
+```
+
+Isso é o que aparece na superfície. Quando você olha para os números em binário, porém, é assim que se parece:
+
+```
+LDA #$02           ; Carregue o valor %00000010 em A
+ASL A              ; Mude os bits para a esquerda uma vez
+                   ; A agora é %00000100
+```
+
+Como você pode ver, o dígito '1' foi movido para a esquerda uma vez. É isso que o ASL faz, movendo os bits para a esquerda.
+
+O ASL também pode mover os bits em um endereço sem afetar A.
+
+```
+LDA #$02           ; Carregue o valor $02 em A
+STA $00            ; Armazene-o no endereço $7E0000
+ASL $00            ; Mude os bits $7E0000 para a esquerda uma vez
+                   ; A ainda é $02, enquanto que $7E0000 agora é $04
+```
+
+Você também pode deslocar bits para a direita usando LSR.
+
+```
+LDA #$02           ; Carregue o valor $02 em A
+LSR A              ; Divida A por 2
+                   ; A agora é $01
+```
+
+E quando você olha para ele no nível binário, em vez de hexadecimal:
+
+```
+LDA #$02           ; Carregue o valor% 00000010 em A
+LSR A              ; Mude os bits para a direita uma vez
+                   ; A agora é %00000001
+```
+
+Como você pode ver, o dígito '1' foi movido para a direita uma vez. É isso que o LSR faz, movendo os bits para a direita.
+
+O LSR também pode mover bits em um endereço sem afetar A.
+
+```
+LDA #$02           ; Carregue o valor $02 em A
+STA $00            ; Guarde isso no endereço $7E0000
+LSR $00            ; Mude os bits de $7E0000 para a direita uma vez
+                   ; A ainda é $02, enquanto que $7E0000 é agora $01
+```
+
+### Bordas e carry flag
+
+Você deve estar se perguntando o que acontece se você deslocar o bit `% 1000 0001` para a direita uma vez, usando LSR. O bit 7 está definido atualmente, mas não há nada para mudar para o bit 7. Ao mesmo tempo, o bit 0 também está definido, mas não tem para onde mudar. Quando isso acontecer, o carry flag recebe o bit 0. Ao mesmo tempo, o bit 7 será definido como 0.
+
+O inverso também é válido quando você muda '%1000 0001' para a esquerda uma vez, usando ASL. O carry flag recebe o bit 7, enquanto o bit 0 será definido para 0.
+
+Aqui estão alguns exemplos de movimentação de bits para o carry flag.
+
+```
+CLC                ; Carry necessário (C) = 0
+LDA #$80           ; A = %1000 0000 | C = 0
+ASL A              ; A = %0000 0000 | C = 1
+ASL A              ; A = %0000 0000 | C = 0
+```
+
+```
+CLC                ; C = 0
+LDA #$01           ; A = %0000 0001 | C = 0
+LSR A              ; A = %0000 0000 | C = 1
+LSR A              ; A = %0000 0000 | C = 0
+```
+
+### Encadeando ASL e LSR
+
+Ao encadear ASL e LSR, você pode multiplicar ou dividir um valor por 2 várias vezes, portanto, multiplicando ou dividindo por 2, 4, 8, 16 e assim por diante. É 2ⁿ, onde n é a quantidade de instruções ASL ou LSR que você está encadeando.
+
+Aqui está um exemplo de multiplicação de um valor por 8.
+
+```
+LDA #$07           ; A agora é $07 = %0000 0111
+ASL A              ; A agora é $0E = %0000 1110
+ASL A              ; A agora é $1C = %0001 1100
+ASL A              ; A agora é $38 = %0011 1000
+                   ; Isso é basicamente $07 * 2³
+```
+
+Aqui está um exemplo de divisão de um valor por 4
+
+```
+LDA #$07           ; A agora é $07 = %0000 0111
+LSR A              ; A agora é $03 = %0000 0011
+LSR A              ; A agora é $01 = %0000 0001
+                   ; Isso é basicamente $07 / 2²
+```
+
+## ROL e ROR
+
+Existem dois opcodes que *rotacionam* bits para a esquerda ou direita, em vez de mudar.
+
+| Opcode  | Nome completo                             | Explicação                                                   |
+| ------- | ----------------------------------------- | ------------------------------------------------------------ |
+| **ROL** | Rotacionar A ou a memória para a esquerda | Move os bits uma vez para a esquerda com carry, envolvendo os bits ao redor |
+| **ROR** | Rotacionar A ou a memória para a direita  | Move os bits uma vez para a direita com carry, envolvendo os bits ao redor |
+
+Eles se comportam da mesma forma que LSR e ASL, exceto que estão usando o carry flag como um bit extra para fazer com que os bits 'envolvam'. Isso significa que o valor não pode ficar 'preso' em $00 eventualmente, como acontece em ASL e LSR. É por isso que eles são chamados de rotação, em vez de deslocamento.
+
+
+Aqui está um exemplo de ROL
+
+```
+CLC                ; Garantindo carry (C) = 0
+LDA #$80           ; A = %1000 0000 | C = 0
+ROL A              ; A = %0000 0000 | C = 1
+ROL A              ; A = %0000 0001 | C = 0
+                   ; A agora é $01
+```
+
+Como você pode ver, o bit 7 envolveu até o bit 0, basicamente 'rotacionando' os bits sem perder nenhuma informação.
+
+```
+CLC                ; C = 0
+LDA #$01           ; A = %0000 0001 | C = 0
+ROR A              ; A = %0000 0000 | C = 1
+ROR A              ; A = %1000 0000 | C = 0
+                   ; A agora é $80
+```
+
+Como você pode ver, o bit 0 envolveu todo o caminho até o bit 7, basicamente 'rotacionando' os bits sem perder nenhuma informação.
+
+
+```
+SEC                ; C = 1
+LDA #$00           ; A = %0000 0000 | C = 1
+ROL A              ; A = %0000 0001 | C = 0
+                   ; A agora é $01
+```
+
+Como você pode ver, você pode definir o carry flag e rotacionar. Isso resultará em A sendo modificado de qualquer jeito, embora A tenha começado como $00.
+
+A rotação também pode afetar os endereços, assim como ASL e LSR. Aqui está um exemplo:
+
+```
+CLC                ; Limpar o carry
+LDA #$02           ; Carregar o valor $02 em A
+STA $00            ; Guardar isso no endereço $7E0000
+ROR $00            ; Mudar os bits de $7E0000 para a direita uma vez
+                   ; A ainda é $02, enquanto que $7E0000 agora é $01
+                   ; e o carry ainda está limpo
+```
+
+## Mudança de bit para o modo de 16 bits
+
+Todas as explicações e comportamentos anteriores também se aplicam ao deslocamento de 16 bits. É que você está trabalhando com 16 bits e o carry flag, não com 8 bits.
