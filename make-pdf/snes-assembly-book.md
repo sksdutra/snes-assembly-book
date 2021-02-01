@@ -44,8 +44,8 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 ## Matemática e Lógica
 
 * [Operações Aritméticas](#Operações-Aritméticas)
-* [Operações de deslocamento de bits](math/shift.md)
-* [Operações bit a bit](math/logic.md)
+* [Operações de Deslocamento de Bits](#Operações-de-Deslocamento-de-Bits)
+* [Operações Bit a Bit](#Operações-Bit-a-Bit)
 * [Hardware math](math/math.md)
 
 ## Aprofundando-se
@@ -1849,23 +1849,23 @@ SBC #$80           ; $10 - $80 = $90, que é -112, o que não faz sentido matema
 
 Todas as explicações e comportamentos anteriores também se aplicam ao modo 16-bit.
 
-# Operações de deslocamento de bits
+# Operações de Deslocamento de *Bits*
 
-O 'deslocamento de bits' é uma operação bit a bit em que você move os bits para a esquerda ou direita. Como resultado, praticamente falando, você divide ou multiplica um número por dois.
+O 'deslocamento de *bits*' é uma operação *bit* a *bit* em que você move os *bits* para a esquerda ou direita. Como resultado, praticamente falando, você divide ou multiplica um número por dois.
 
 ## ASL e LSR
 
 Existem dois opcodes que deslocam bits para a esquerda ou direita.
 
-| Opcode  | Nome completo                           | Explicação                                                   |
-| ------- | --------------------------------------- | ------------------------------------------------------------ |
-| **ASL** | A ou mudança de memória para a esquerda | Move os bits para a esquerda uma vez sem carry, praticamente multiplicando um valor por 2 |
-| **LSR** | A ou mudança de memória para a esquerda | Move os bits para a direita uma vez sem carry, praticamente dividindo um valor por 2 |
+| Opcode  | Nome completo           | Explicação                                                   |
+| ------- | ----------------------- | ------------------------------------------------------------ |
+| **ASL** | A or memory shift left  | Move os *bits* para a esquerda uma vez sem carga, praticamente multiplicando um valor por 2 |
+| **LSR** | A or memory shift right | Move os *bits* para a direita uma vez sem carga, praticamente dividindo um valor por 2 |
 
-ASL e LSR podem afetar A ou um endereço, assim como INC e DEC. Aqui está um exemplo de ASL em ação:
+ASL e LSR podem afetar `A` ou um endereço, assim como `INC` e `DEC`. Aqui está um exemplo de `ASL` em ação:
 
 ```
-LDA #$02           ; Carregue o valor $02 em A
+LDA #$02           ; Carrega o valor $02 em A
 ASL A              ; Multipica A por 2
                    ; A agora é $04
 ```
@@ -1880,20 +1880,20 @@ ASL A              ; Mude os bits para a esquerda uma vez
 
 Como você pode ver, o dígito '1' foi movido para a esquerda uma vez. É isso que o ASL faz, movendo os bits para a esquerda.
 
-O ASL também pode mover os bits em um endereço sem afetar A.
+O ASL também pode mover os bits em um endereço sem afetar `A`.
 
 ```
 LDA #$02           ; Carregue o valor $02 em A
 STA $00            ; Armazene-o no endereço $7E0000
-ASL $00            ; Mude os bits $7E0000 para a esquerda uma vez
+ASL $00            ; Desloque os bits $7E0000 para a esquerda uma vez
                    ; A ainda é $02, enquanto que $7E0000 agora é $04
 ```
 
 Você também pode deslocar bits para a direita usando LSR.
 
 ```
-LDA #$02           ; Carregue o valor $02 em A
-LSR A              ; Divida A por 2
+LDA #$02           ; Carrega o valor $02 em A
+LSR A              ; Divide A por 2
                    ; A agora é $01
 ```
 
@@ -1901,31 +1901,31 @@ E quando você olha para ele no nível binário, em vez de hexadecimal:
 
 ```
 LDA #$02           ; Carregue o valor% 00000010 em A
-LSR A              ; Mude os bits para a direita uma vez
+LSR A              ; Desloca os bits para a direita uma vez
                    ; A agora é %00000001
 ```
 
-Como você pode ver, o dígito '1' foi movido para a direita uma vez. É isso que o LSR faz, movendo os bits para a direita.
+Como você pode ver, o dígito '1' foi movido para a direita uma vez. É isso que o LSR faz, movendo os *bits* para a direita.
 
-O LSR também pode mover bits em um endereço sem afetar A.
+O LSR também pode mover *bits* em um endereço sem afetar A.
 
 ```
-LDA #$02           ; Carregue o valor $02 em A
-STA $00            ; Guarde isso no endereço $7E0000
-LSR $00            ; Mude os bits de $7E0000 para a direita uma vez
+LDA #$02           ; Carrega o valor $02 em A
+STA $00            ; Armazena no endereço $7E0000
+LSR $00            ; Desloca os bits de $7E0000 para a direita uma vez
                    ; A ainda é $02, enquanto que $7E0000 é agora $01
 ```
 
-### Bordas e carry flag
+### Casos extremos e sinalizador de carga
 
-Você deve estar se perguntando o que acontece se você deslocar o bit `% 1000 0001` para a direita uma vez, usando LSR. O bit 7 está definido atualmente, mas não há nada para mudar para o bit 7. Ao mesmo tempo, o bit 0 também está definido, mas não tem para onde mudar. Quando isso acontecer, o carry flag recebe o bit 0. Ao mesmo tempo, o bit 7 será definido como 0.
+Você deve estar se perguntando o que acontece se você deslocar o *bit* `% 1000 0001` para a direita uma vez, usando `LSR`. O *bit* 7 está definido atualmente, mas não há nada para mudar para o *bit* 7. Ao mesmo tempo, o *bit* 0 também está definido, mas não tem para onde mudar. Quando isso acontecer, o sinalizador de carga recebe o *bit* 0. Ao mesmo tempo, o *bit* 7 será definido como 0.
 
-O inverso também é válido quando você muda '%1000 0001' para a esquerda uma vez, usando ASL. O carry flag recebe o bit 7, enquanto o bit 0 será definido para 0.
+O inverso também é válido quando você muda '%1000 0001' para a esquerda uma vez, usando `ASL`. O sinalizador de carga recebe o *bit* 7, enquanto o *bit* 0 será definido para 0.
 
-Aqui estão alguns exemplos de movimentação de bits para o carry flag.
+Aqui estão alguns exemplos de movimentação de *bits* para o sinalizador de carga.
 
 ```
-CLC                ; Carry necessário (C) = 0
+CLC                ; Certica-se que (C) = 0
 LDA #$80           ; A = %1000 0000 | C = 0
 ASL A              ; A = %0000 0000 | C = 1
 ASL A              ; A = %0000 0000 | C = 0
@@ -1940,7 +1940,7 @@ LSR A              ; A = %0000 0000 | C = 0
 
 ### Encadeando ASL e LSR
 
-Ao encadear ASL e LSR, você pode multiplicar ou dividir um valor por 2 várias vezes, portanto, multiplicando ou dividindo por 2, 4, 8, 16 e assim por diante. É 2ⁿ, onde n é a quantidade de instruções ASL ou LSR que você está encadeando.
+Ao encadear `ASL` e `LSR`, você pode multiplicar ou dividir um valor por 2 várias vezes, portanto, multiplicando ou dividindo por 2, 4, 8, 16 e assim por diante. É 2ⁿ, onde n é a quantidade de instruções `ASL` ou `LSR` que você está encadeando.
 
 Aqui está um exemplo de multiplicação de um valor por 8.
 
@@ -1965,25 +1965,25 @@ LSR A              ; A agora é $01 = %0000 0001
 
 Existem dois opcodes que *rotacionam* bits para a esquerda ou direita, em vez de mudar.
 
-| Opcode  | Nome completo                             | Explicação                                                   |
-| ------- | ----------------------------------------- | ------------------------------------------------------------ |
-| **ROL** | Rotacionar A ou a memória para a esquerda | Move os bits uma vez para a esquerda com carry, envolvendo os bits ao redor |
-| **ROR** | Rotacionar A ou a memória para a direita  | Move os bits uma vez para a direita com carry, envolvendo os bits ao redor |
+| Opcode  | Nome completo            | Explicação                                                   |
+| ------- | ------------------------ | ------------------------------------------------------------ |
+| **ROL** | Rotate A or memory left  | Move os *bits* uma vez para a esquerda com carga, repassando os *bits* ao redor |
+| **ROR** | Rotate A or memory right | Move os *bits* uma vez para a direita com carga, repassando os *bits* ao redor |
 
-Eles se comportam da mesma forma que LSR e ASL, exceto que estão usando o carry flag como um bit extra para fazer com que os bits 'envolvam'. Isso significa que o valor não pode ficar 'preso' em $00 eventualmente, como acontece em ASL e LSR. É por isso que eles são chamados de rotação, em vez de deslocamento.
+Eles se comportam da mesma forma que `LSR` e `ASL`, exceto que estão usando o sinalizador de carga como um *bit* extra para fazer com que os *bits* sejam rotacionados. Isso significa que o valor não pode ficar 'preso' em $00 eventualmente, como acontece em `ASL` e `LSR`. É por isso que eles são chamados de rotação, em vez de deslocamento.
 
 
-Aqui está um exemplo de ROL
+Aqui está um exemplo de `ROL`:
 
 ```
-CLC                ; Garantindo carry (C) = 0
+CLC                ; Certica-se que (C) = 0
 LDA #$80           ; A = %1000 0000 | C = 0
 ROL A              ; A = %0000 0000 | C = 1
 ROL A              ; A = %0000 0001 | C = 0
                    ; A agora é $01
 ```
 
-Como você pode ver, o bit 7 envolveu até o bit 0, basicamente 'rotacionando' os bits sem perder nenhuma informação.
+Como você pode ver, o *bit* 7 reapareceu no *bit* 0, basicamente 'rotacionando' os *bits* sem perder nenhuma informação.
 
 ```
 CLC                ; C = 0
@@ -1993,7 +1993,7 @@ ROR A              ; A = %1000 0000 | C = 0
                    ; A agora é $80
 ```
 
-Como você pode ver, o bit 0 envolveu todo o caminho até o bit 7, basicamente 'rotacionando' os bits sem perder nenhuma informação.
+Como você pode ver, o *bit* 0 reapareceu no *bit* 7, basicamente 'rotacionando' os *bits* sem perder nenhuma informação.
 
 
 ```
@@ -2003,19 +2003,294 @@ ROL A              ; A = %0000 0001 | C = 0
                    ; A agora é $01
 ```
 
-Como você pode ver, você pode definir o carry flag e rotacionar. Isso resultará em A sendo modificado de qualquer jeito, embora A tenha começado como $00.
+Como você pode ver, você pode definir o sinalizador de carga e rotacionar. Isso resultará em `A` sendo modificado de qualquer jeito, embora `A` tenha começado como $00.
 
-A rotação também pode afetar os endereços, assim como ASL e LSR. Aqui está um exemplo:
+A rotação também pode afetar os endereços, assim como `ASL` e `LSR`. Aqui está um exemplo:
 
 ```
-CLC                ; Limpar o carry
-LDA #$02           ; Carregar o valor $02 em A
+CLC                ; Desabilita o sinalizador de carga
+LDA #$02           ; Carrega o valor $02 em A
 STA $00            ; Guardar isso no endereço $7E0000
-ROR $00            ; Mudar os bits de $7E0000 para a direita uma vez
+ROR $00            ; Rotaciona os bits de $7E0000 para a direita uma vez
                    ; A ainda é $02, enquanto que $7E0000 agora é $01
-                   ; e o carry ainda está limpo
+                   ; e o sinalizador de carga ainda está desabilitado
 ```
 
-## Mudança de bit para o modo de 16 bits
+## Mudança de bit em modo de 16 bits
 
-Todas as explicações e comportamentos anteriores também se aplicam ao deslocamento de 16 bits. É que você está trabalhando com 16 bits e o carry flag, não com 8 bits.
+Todas as explicações e comportamentos anteriores também se aplicam ao deslocamento de 16 *bits*. Você está trabalhando com 16 *bits* e o sinalizador de carga, não com 8 *bits*.
+
+# Operações *Bit* a *Bit*
+
+As operações *bit* a *bit* são fundamentais quando se trata de programação assembly. O 65c816 suporta várias instruções *bit* a *bit*, que serão abordadas neste capítulo. Os operadores *bit* a *bit* trabalham principalmente com *bits* dos *bytes*, portanto, neste capítulo, usaremos os termos `x` e `y` quando nos referirmos ao *bits*.
+
+Ás vezes nos referiremos ao valor `1` em como `verdadeiro` e ao valor `0` como `falso`.
+
+## AND
+
+`AND` é um operador que afeta o acumulador, aplicando um "E" lógico em todos os bits do registrador.
+
+| Opcode  | Nome completo | Explicação                                                   |
+| ------- | ------------- | ------------------------------------------------------------ |
+| **AND** | Logical AND   | "E" lógico, também conhecido como "` & `" em algumas linguagens de programação |
+
+O resultado de `x AND y` será `verdadeiro` se `x` for `verdadeiro` e ` y` também for `verdadeiro`. Caso contrário, o resultado será `falso`.
+
+Veja este exemplo de um AND lógico.
+
+```
+LDA #$F0           ; A = 1111 0000
+AND #$98           ; AND 1001 1000
+                   ; A = 1001 0000 = $90
+```
+
+Para entender este código, você terá que ler os comentários de cima para baixo. Como você pode ver, a primeira linha contém o valor binário do acumulador (`1111 0000`), enquanto a segunda linha contém o valor binário do parâmetro do operador AND (`1001 1000`). Quando dois 1 são avaliados, o resultado também será 1. O quer dizer que tanto x quanto y forem`verdadeiros`. Se x = 1 e y = 1, o resultado também será 1.
+
+Esta regra pode ser escrita em uma "tabela verdade".
+
+| Bit comparado | Operação AND | Resultado |
+| ------------- | ------------ | --------- |
+| 1             | 1            | 1         |
+| 0             | 1            | 0         |
+| 1             | 0            | 0         |
+| 0             | 0            | 0         |
+
+Em suma, sempre que houver um 0 em A ou no bit do valor do AND, o bit resultante também será 0.
+
+## ORA
+
+ORA é uma instrução que afeta o acumulador, aplicando um "OU" lógico em todos os bits.
+
+| Opcode  | Nome completo | Explicação                                                   |
+| ------- | ------------- | ------------------------------------------------------------ |
+| **ORA** | Logical OR    | "OU" lógico, também conhecido como "`|`" em algumas linguagens de programação |
+
+O resultado de `x OR y` será `verdadeiro` se  ` x` for ` verdadeiro` ou `y` for ` verdadeiro`. Caso contrário, o resultado será `falso`.
+
+A seguir temos um exemplo de um ORA:
+
+```
+LDA #$F0           ; A = 1111 0000
+ORA #$87           ; ORA 1000 0111
+                   ; A = 1111 0111 = $F7
+```
+
+Se um dos *bits* for 1, o *bit* resultante será 1. Após a avaliação de ORA, o resultado será armazenado em A. Aqui está a tabela verdade para ORA:
+
+| Bit comparado | Operação ORA | Resultado |
+| ------------- | ------------ | --------- |
+| 1             | 1            | 1         |
+| 0             | 1            | 1         |
+| 1             | 0            | 1         |
+| 0             | 0            | 0         |
+
+Então, basicamente, sempre que `A` ou o *bit* do valor de `ORA` for 1, o *bit* resultante também será 1.
+
+## EOR
+
+`EOR` é um operador que afeta o acumulador, aplicando um "OR exclusivo" lógico (XOR) em todos os bits.
+
+| Opcode  | Nome completo | Explicação                                                   |
+| ------- | ------------- | ------------------------------------------------------------ |
+| **EOR** | Logical XOR   | "OU-EXCLUSIVO" lógico, também conhecido como "` ^ `" em algumas linguagens de programação |
+
+O resultado de `x XOR y` será `verdadeiro` se `x` for  `verdadeiro` e `y` for `falso`, ou `x`  for `falso` e `y` for `verdadeiro`. Caso contrário, o resultado será `falso`.
+
+Segue um exemplo de um XOR:
+
+```
+LDA #$99           ; A = 1001 1001
+EOR #$F0           ; EOR 1111 0000
+                   ; A = 0110 1001 = $69
+```
+
+Basicamente, se os *bits* do acumulador e os *bits* do valor fornecido são 1, o resultado será 0. E se são 0, o resultado também será 0. Se eles não são iguais, o resultado será 1. Aqui está a tabela verdade para EOR:
+
+| Bit comparado | Operação EOR | Resultado |
+| ------------- | ------------ | --------- |
+| 1             | 1            | 0         |
+| 0             | 1            | 1         |
+| 1             | 0            | 1         |
+| 0             | 0            | 0         |
+
+## BIT
+
+`BIT` é uma instrução que praticamente faz a mesma coisa que o AND lógico, mas o resultado NÃO é armazenado no acumulador. Em vez disso, afeta apenas os sinalizadores do processador.
+
+| Opcode  | Nome completo | Explicação                                  |
+| ------- | ------------- | ------------------------------------------- |
+| **BIT** | Bit test      | Testa os *bits* do acumulador ou da memória |
+
+Aqui está um exemplo de `BIT` em uso:
+
+```
+LDA #$04           ; A = 0000 0100 = $04
+BIT #$00           ; AND 0000 0000. Nenhum dos bits estão habilitatos
+                   ; então, normalmente, A deveria ser $00, mas ainda é $04
+                   ; No entanto, o sinalizador zero foi habilitado porque
+                   ; o resultado *deveria* ser $00.
+```
+
+O `BIT` tem um recurso que o distingue de um `AND`, envolvendo sinalizadores do processador diferentes do sinalizador zero. Quando você usa o `BIT` em um endereço, ao invés do acumulador, ele também pode afetar o sinalizador negativo e o sinalizador *overflow*. Se o *bit* 7 do valor do endereço for 1, o sinalizador negativo será habilitado. Se o *bit* 6 do valor do endereço for 1, o sinalizador *overflow* será habilitado. Aqui está um exemplo de uso de `BIT` em um endereço:
+
+```
+BIT $04            ; Testa os bits do valor do endereço $7E0004
+```
+
+Se o valor de $7E0004 fosse $80 (1000 0000), o sinalizador negativo seria habilitado e o sinalizador *overflow* estaria desabilitado. É útil para checar de forma mais rápida se o valor de um endereço é negativo.
+
+Se o valor de $7E0004 fosse $40 (0100 0000), o sinalizador negativo estaria desabilitado e o sinalizador *overflow* estaria habilitado. Útil para checar se o *bit* 6 está habilitado.
+
+Se o valor de $7E0004 fosse $C0 (1100 0000), tanto o sinalizador negativo quando o sinalizador *overflow* estariam habilitados.
+
+Coincidentemente, os *bits* para negativo (bit 7)  e overflow (*bit* 6)  correspondem aos mesmos *bits* no registrador de status do processador: `nvmxdizc`.
+
+| *Bits*       | *Resultado BIT*                     |
+| ------------ | ----------------------------------- |
+| *Bit* 7      | Sinalizador negativo habilitado     |
+| *Bit* 6      | Sinalizador *overflow* habilitado   |
+| *Bits* 7 e 6 | Ambos os sinalizadores habilitados. |
+
+Quando você está realizando uma operação `BIT` em um endereço de RAM, os sinalizadores `N` e `V` serão habilitados ou desabilitados, independentemente do valor no acumulador. O sinalizador zero depende do valor do acumulador e do valor do endereço da RAM. Portanto, o `BIT` com um endereço da RAM executa o `AND` e uma inevitável checagem dos *bits* 7 e 6 do endereço de RAM.
+
+# Matemática Usando Hardware
+
+O processador do SNES é capaz de realizar [multiplicação básica por 2ⁿ](../math/shift.md), mas se você precisar multiplicar ou dividir por outros números, você precisa usar certos registradores de hardware do SNES.
+
+## Multiplicação usando hardware sem sinal
+
+O SNES tem um conjunto de registradores de hardware para multiplicação sem sinal:
+
+| Registrador | Acesso  | Descrição                                                    |
+| ----------- | ------- | ------------------------------------------------------------ |
+| $4202       | Escrita | Multiplicando, 8-bit, sem sinal.                             |
+| $4203       | Escrita | Multiplicador, 8-bit, sem sinal. Escrever neste registrador também inicia o processo de multiplicação. |
+| $4216       | Leitura | Produto 16-bit da multiplicação sem sinal, low byte.         |
+| $4217       | Leitura | Produto 16-bit da multiplicação sem sinal, high byte.        |
+
+Após escrever em `$4203` para iniciar o processo de multiplicação, você deverá esperar 8 [ciclos de máquina](../indepth/cycles.md), o que é feito tradicionalmente adicionando 4 instruções `NOP` ao código. Se você não aguardar 8 ciclos de máquina, os resultados serão imprevisíveis.
+
+Eis um exemplo `42 * 129 = 5418` (em hexadecimal: `$2A * $81 = $152A`):
+
+```
+LDA #$2A           ; 42
+STA $4202
+LDA #$81           ; 129
+STA $4203
+NOP                ; Esperar 8 ciclos de máquina
+NOP
+NOP
+NOP
+LDA $4216          ; A = $2A (low byte do resultado)
+LDA $4217          ; A = $15 (high byte do resultado)
+```
+
+## Multiplicação usando hardware com sinal
+
+Há um conjunto de registradores de hardware que podem ser usados para multiplicação com sinal rápida:
+
+| Registrador | Acesso              | Descrição                                                    |
+| ----------- | ------------------- | ------------------------------------------------------------ |
+| $211B       | Escrita, duas vezes | Multiplicando, 16-bit, com sinal. Primeira escrita: Low byte do multiplicando. Segunda escrita: High byte do multiplicando. |
+| $211C       | Escrita             | Multiplicador, 8-bit.                                        |
+| $2134       | Leitura             | Produto 24-bit da multiplicação com sinal, low byte.         |
+| $2134       | Leitura             | Produto 24-bit da multiplicação com sina, middle byte.       |
+| $2134       | Leitura             | Produto 24-bit da multiplicação com sina, high byte.         |
+
+Há um problema em usar estes registradores de hardware, pois eles dobram como certos registradores do Mode 7:
+
+- Você só pode utilizá-los para multiplicação **com sinal**
+    - O resultado é um 24-but com sinal, o que significa que os resultados estão entre `-8,388,608` a `8,388,607`.
+- Os resultados são instantâneos. Você não precisa usar `NOP` para esperar os resultados.
+- Você não pode usar quando gŕaficos em Mode 7 estão sendo renderizados na tela.
+    - Quando o Mode 7 está habilitado, você só pode usar dentro de um NMI (v-blank).
+    - Isso significa também que você pode usar sem restrições, fora do Mode 7.
+
+Note that register `$211B` is "write twice". This means that you have to write an 8-bit value twice to this same register which in total makes up a 16-bit value. First, you write the low byte, then the high byte of the 16-bit value.
+
+Here's an example of `-30000 * 9 = -270000` (in hexadecimal: `$8AD0 * $09 = $FBE150`):
+
+Aqui está um exemplo `-30000 * 9 = -270000` (em hexadecimal: `$8AD0 * $09 = $FBE150`):
+
+```
+LDA #$D0           ; Low byte de $8AD0
+STA $211B
+LDA #$8A           ; High byte de $8AD0
+STA $211B          ; Isso configura o multiplicando
+
+LDA #$09           ; $09
+STA $211C          ; Isso configura o multiplicador
+
+LDA $2134          ; A = $50 (result low byte)
+LDA $2135          ; A = $E1 (result middle byte)
+LDA $2136          ; A = $FB (result high byte)
+                   ; (= $FBE150)
+```
+
+## Divisão usando hardware sem sinal
+
+O SNES tem um conjunto de registradores de hardware para divisão sem sinal. Abaixo você encontra uma lista deles:
+
+| Registrador | Acesso  | Descrição                                                    |
+| ----------- | ------- | ------------------------------------------------------------ |
+| $4204       | Escrita | Dividendo, 16-bit, sem sinal, low byte.                      |
+| $4205       | Escrita | Dividendo, 16-bit, sem sinal, high byte.                     |
+| $4206       | Escrita | Divisor, 8-bit, sem sinal. Escrever neste registrador também inicia o processo de divisão. |
+| $4214       | Leitura | Quociente da divisão16-bit, low byte                         |
+| $4215       | Leitura | Quociente da divisão16-bit, high byte                        |
+| $4216       | Leitura | Resto da divisão, sem sinal, low byte                        |
+| $4217       | Leitura | Resto da divisão, sem sinal, high byte                       |
+
+Quociente significa quantas vezes o dividendo pode "caber" no divisor. Por exemplo: `6/3 = 2`. Portanto, o quociente é 2. Outra maneira de ler isso é: Você pode extrair 3 **duas** vezes de 6 e terminar com exatamente 0 como resto.
+
+Módulo é uma operação que determina o reso do dividendo que não poderia "caber" no divisor. Por exemplo: `8/3 = 2`. Você pode subtrair 3 duas vezes de 8, mas ao fim, você tem um 2 como resto. Assim, o resto desta expressão é `2`. Como há registros de hardware que suportam restos, o SNES também oferece suporte à operação de módulo.
+
+Após escrever em `$4206` para iniciar o processo de divisão, você deverá esperar 16 [ciclos de máquina](../indepth/cycles.md), o que é feito tradicionalmente adicionando oito instruções `NOP` ao código. Se você não aguardar 16 ciclos de máquina, os resultados serão imprevisíveis.
+
+Aqui está um exemplo `256 / 2 = 128` (em hexadecimal: `$0100 / $02 = $0080`):
+
+```
+LDA #$00
+STA $4204
+LDA #$01           ; Escreve $0100 como dividendo
+STA $4205
+LDA #$02           ; Escreve $02 como divisor
+STA $4206
+NOP                ; Aguarda 16 ciclos de máquina
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+LDA $4214          ; A = $80 (resultado low byte)
+LDA $4215          ; A = $00 (resultado high byte)
+LDA $4216          ; A = $00, pois não há resto
+LDA $4217          ; A = $00, pois não há resto
+```
+
+Um exemplo demonstrando uma operação de módulo: `257 / 2 = 128, resto 1` (em hexadecimal: `$0101 / $02 = $0080, resto $0001`)
+
+```
+LDA #$01
+STA $4204
+LDA #$01           ; Escreve $0101 como dividendo
+STA $4205
+LDA #$02           ; Escreve $02 como divisor
+STA $4206
+NOP                ; Aguarda 16 ciclos de máquina
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+LDA $4214          ; A = $80 (resultado low byte)
+LDA $4215          ; A = $00 (resultado high byte)
+LDA $4216          ; A = $01, pois há resto (low byte do resto)
+LDA $4217          ; A = $00 (high byte do resto)
+```
+
+Não há divisão usando hardware com sinal.
