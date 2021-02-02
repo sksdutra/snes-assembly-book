@@ -46,7 +46,7 @@ A tradução e revisão deste documento é um esforço coletivo de membros da ce
 * [Operações Aritméticas](#Operações-Aritméticas)
 * [Operações de Deslocamento de Bits](#Operações-de-Deslocamento-de-Bits)
 * [Operações Bit a Bit](#Operações-Bit-a-Bit)
-* [Hardware math](math/math.md)
+* [Matemática Usando Hardware](#Matemática-Usando-Hardware)
 
 ## Aprofundando-se
 
@@ -2155,7 +2155,7 @@ Quando você está realizando uma operação `BIT` em um endereço de RAM, os si
 
 # Matemática Usando Hardware
 
-O processador do SNES é capaz de realizar [multiplicação básica por 2ⁿ](../math/shift.md), mas se você precisar multiplicar ou dividir por outros números, você precisa usar certos registradores de hardware do SNES.
+O processador do SNES é capaz de realizar [multiplicação básica por 2ⁿ](#Operações-de-Deslocamento-de-Bits), mas se você precisar multiplicar ou dividir por outros números, você precisa usar certos registradores de hardware do SNES.
 
 ## Multiplicação usando hardware sem sinal
 
@@ -2163,12 +2163,12 @@ O SNES tem um conjunto de registradores de hardware para multiplicação sem sin
 
 | Registrador | Acesso  | Descrição                                                    |
 | ----------- | ------- | ------------------------------------------------------------ |
-| $4202       | Escrita | Multiplicando, 8-bit, sem sinal.                             |
-| $4203       | Escrita | Multiplicador, 8-bit, sem sinal. Escrever neste registrador também inicia o processo de multiplicação. |
-| $4216       | Leitura | Produto 16-bit da multiplicação sem sinal, low byte.         |
-| $4217       | Leitura | Produto 16-bit da multiplicação sem sinal, high byte.        |
+| $4202       | Escrita | Multiplicando, 8 *bits*, sem sinal                           |
+| $4203       | Escrita | Multiplicador, 8 *bits*, sem sinal. Escrever neste registrador também inicia o processo de multiplicação |
+| $4216       | Leitura | Produto 16 *bits* da multiplicação sem sinal, *byte* menos significativo |
+| $4217       | Leitura | Produto 16 *bits* da multiplicação sem sinal, *byte* mais significativo |
 
-Após escrever em `$4203` para iniciar o processo de multiplicação, você deverá esperar 8 [ciclos de máquina](../indepth/cycles.md), o que é feito tradicionalmente adicionando 4 instruções `NOP` ao código. Se você não aguardar 8 ciclos de máquina, os resultados serão imprevisíveis.
+Após escrever em `$4203` para iniciar o processo de multiplicação, você deverá esperar 8 [ciclos de máquina](../indepth/cycles.md), LINK PARA REVISAR o que é feito tradicionalmente adicionando 4 instruções `NOP` ao código. Se você não aguardar 8 ciclos de máquina, os resultados serão imprevisíveis.
 
 Eis um exemplo `42 * 129 = 5418` (em hexadecimal: `$2A * $81 = $152A`):
 
@@ -2181,8 +2181,8 @@ NOP                ; Esperar 8 ciclos de máquina
 NOP
 NOP
 NOP
-LDA $4216          ; A = $2A (low byte do resultado)
-LDA $4217          ; A = $15 (high byte do resultado)
+LDA $4216          ; A = $2A (byte menos significativo do resultado)
+LDA $4217          ; A = $15 (byte mais significativo do resultado)
 ```
 
 ## Multiplicação usando hardware com sinal
@@ -2191,11 +2191,11 @@ Há um conjunto de registradores de hardware que podem ser usados para multiplic
 
 | Registrador | Acesso              | Descrição                                                    |
 | ----------- | ------------------- | ------------------------------------------------------------ |
-| $211B       | Escrita, duas vezes | Multiplicando, 16-bit, com sinal. Primeira escrita: Low byte do multiplicando. Segunda escrita: High byte do multiplicando. |
-| $211C       | Escrita             | Multiplicador, 8-bit.                                        |
-| $2134       | Leitura             | Produto 24-bit da multiplicação com sinal, low byte.         |
-| $2134       | Leitura             | Produto 24-bit da multiplicação com sina, middle byte.       |
-| $2134       | Leitura             | Produto 24-bit da multiplicação com sina, high byte.         |
+| $211B       | Escrita, duas vezes | Multiplicando, 16 *bits*, com sinal. Primeira escrita: *Byte* menos significativo do multiplicando. Segunda escrita: *Byte* mais significativo do multiplicando |
+| $211C       | Escrita             | Multiplicador, 8 *bits*                                      |
+| $2134       | Leitura             | Produto 24 *bits* da multiplicação com sinal, *byte* menos significativo |
+| $2134       | Leitura             | Produto 24 *bits* da multiplicação com sina, *byte* central  |
+| $2134       | Leitura             | Produto 24 *bits* da multiplicação com sina, *byte* mais significativo |
 
 Há um problema em usar estes registradores de hardware, pois eles dobram como certos registradores do Mode 7:
 
@@ -2203,27 +2203,25 @@ Há um problema em usar estes registradores de hardware, pois eles dobram como c
     - O resultado é um 24-but com sinal, o que significa que os resultados estão entre `-8,388,608` a `8,388,607`.
 - Os resultados são instantâneos. Você não precisa usar `NOP` para esperar os resultados.
 - Você não pode usar quando gŕaficos em Mode 7 estão sendo renderizados na tela.
-    - Quando o Mode 7 está habilitado, você só pode usar dentro de um NMI (v-blank).
+    - Quando o Mode 7 está habilitado, você só pode usar dentro de um `NMI` (*v-blank*).
     - Isso significa também que você pode usar sem restrições, fora do Mode 7.
 
-Note that register `$211B` is "write twice". This means that you have to write an 8-bit value twice to this same register which in total makes up a 16-bit value. First, you write the low byte, then the high byte of the 16-bit value.
-
-Here's an example of `-30000 * 9 = -270000` (in hexadecimal: `$8AD0 * $09 = $FBE150`):
+Observe que o registrador `$211B` é "escrito duas vezes". Isso significa que você deve escrever um valor de 8 *bits* duas vezes nesse mesmo registrador, o que no total perfaz um valor de 16 *bits*. Primeiro, você escreve o *byte* menos significativo, depois o *byte* mais significativo do valor de 16 *bits*.
 
 Aqui está um exemplo `-30000 * 9 = -270000` (em hexadecimal: `$8AD0 * $09 = $FBE150`):
 
 ```
-LDA #$D0           ; Low byte de $8AD0
+LDA #$D0           ; Byte menos significativo de $8AD0
 STA $211B
-LDA #$8A           ; High byte de $8AD0
+LDA #$8A           ; Byte mais significativo de $8AD0
 STA $211B          ; Isso configura o multiplicando
 
 LDA #$09           ; $09
 STA $211C          ; Isso configura o multiplicador
 
-LDA $2134          ; A = $50 (result low byte)
-LDA $2135          ; A = $E1 (result middle byte)
-LDA $2136          ; A = $FB (result high byte)
+LDA $2134          ; A = $50 (resultado: byte menos significativo)
+LDA $2135          ; A = $E1 (resultado: byte central)
+LDA $2136          ; A = $FB (resultado: byte mais significativo)
                    ; (= $FBE150)
 ```
 
@@ -2233,19 +2231,19 @@ O SNES tem um conjunto de registradores de hardware para divisão sem sinal. Aba
 
 | Registrador | Acesso  | Descrição                                                    |
 | ----------- | ------- | ------------------------------------------------------------ |
-| $4204       | Escrita | Dividendo, 16-bit, sem sinal, low byte.                      |
-| $4205       | Escrita | Dividendo, 16-bit, sem sinal, high byte.                     |
-| $4206       | Escrita | Divisor, 8-bit, sem sinal. Escrever neste registrador também inicia o processo de divisão. |
-| $4214       | Leitura | Quociente da divisão16-bit, low byte                         |
-| $4215       | Leitura | Quociente da divisão16-bit, high byte                        |
-| $4216       | Leitura | Resto da divisão, sem sinal, low byte                        |
-| $4217       | Leitura | Resto da divisão, sem sinal, high byte                       |
+| $4204       | Escrita | Dividendo, 16 *bits*, sem sinal, *byte* menos significativo  |
+| $4205       | Escrita | Dividendo, 16 *bits*, sem sinal, *byte* mais significativo   |
+| $4206       | Escrita | Divisor, 8 *bits*, sem sinal. Escrever neste registrador também inicia o processo de divisão |
+| $4214       | Leitura | Quociente da divisão 16 *bits*, *byte* menos significativo   |
+| $4215       | Leitura | Quociente da divisão 16 *bits*, *byte* mais significativo    |
+| $4216       | Leitura | Resto da divisão, sem sinal, *byte* menos significativo      |
+| $4217       | Leitura | Resto da divisão, sem sinal, *byte* mais significativo       |
 
 Quociente significa quantas vezes o dividendo pode "caber" no divisor. Por exemplo: `6/3 = 2`. Portanto, o quociente é 2. Outra maneira de ler isso é: Você pode extrair 3 **duas** vezes de 6 e terminar com exatamente 0 como resto.
 
-Módulo é uma operação que determina o reso do dividendo que não poderia "caber" no divisor. Por exemplo: `8/3 = 2`. Você pode subtrair 3 duas vezes de 8, mas ao fim, você tem um 2 como resto. Assim, o resto desta expressão é `2`. Como há registros de hardware que suportam restos, o SNES também oferece suporte à operação de módulo.
+Módulo é uma operação que determina o resto do dividendo que não poderia "caber" no divisor. Por exemplo: `8/3 = 2`. Você pode subtrair 3 duas vezes de 8, mas ao fim, você tem um 2 como resto. Assim, o resto desta expressão é `2`. Como há registros de hardware que suportam restos, o SNES também oferece suporte à operação de módulo.
 
-Após escrever em `$4206` para iniciar o processo de divisão, você deverá esperar 16 [ciclos de máquina](../indepth/cycles.md), o que é feito tradicionalmente adicionando oito instruções `NOP` ao código. Se você não aguardar 16 ciclos de máquina, os resultados serão imprevisíveis.
+Após escrever em `$4206` para iniciar o processo de divisão, você deverá esperar 16 [ciclos de máquina](../indepth/cycles.md), LINK PARA REVISAR o que é feito tradicionalmente adicionando oito instruções `NOP` ao código. Se você não aguardar 16 ciclos de máquina, os resultados serão imprevisíveis.
 
 Aqui está um exemplo `256 / 2 = 128` (em hexadecimal: `$0100 / $02 = $0080`):
 
@@ -2264,8 +2262,8 @@ NOP
 NOP
 NOP
 NOP
-LDA $4214          ; A = $80 (resultado low byte)
-LDA $4215          ; A = $00 (resultado high byte)
+LDA $4214          ; A = $80 (resultado: byte menos significativo)
+LDA $4215          ; A = $00 (resultado: byte mais significativo)
 LDA $4216          ; A = $00, pois não há resto
 LDA $4217          ; A = $00, pois não há resto
 ```
@@ -2287,10 +2285,13 @@ NOP
 NOP
 NOP
 NOP
-LDA $4214          ; A = $80 (resultado low byte)
-LDA $4215          ; A = $00 (resultado high byte)
-LDA $4216          ; A = $01, pois há resto (low byte do resto)
-LDA $4217          ; A = $00 (high byte do resto)
+LDA $4214          ; A = $80 (resultado: byte menos significativo)
+LDA $4215          ; A = $00 (resultado: byte mais significativo)
+LDA $4216          ; A = $01, pois há resto (byte menos significativo do resto)
+LDA $4217          ; A = $00 (byte mais significativo do resto)
 ```
 
 Não há divisão usando hardware com sinal.
+
+# Aprofundado-se
+
